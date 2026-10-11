@@ -27,8 +27,10 @@ final class DsAuthCodes {
     static final String MAGIC_HASH = "ds.magic";
     static final String EXPIRES = "ds.exp";
     static final String ATTEMPTS = "ds.attempts";
+    static final String SENT_AT = "ds.sent";
     static final long TTL_MS = 10 * 60 * 1000L;
     static final int MAX_ATTEMPTS = 5;
+    static final int RESEND_SECONDS = 120;
 
     private static final Logger LOG = Logger.getLogger(DsAuthCodes.class);
     private static final SecureRandom RANDOM = new SecureRandom();
@@ -46,11 +48,6 @@ final class DsAuthCodes {
         byte[] magicBytes = new byte[32];
         RANDOM.nextBytes(magicBytes);
         String magic = Base64.getUrlEncoder().withoutPadding().encodeToString(magicBytes);
-        AuthenticationSessionModel session = context.getAuthenticationSession();
-        session.setAuthNote(CODE_HASH, hex(sha256(code)));
-        session.setAuthNote(MAGIC_HASH, hex(sha256(magic)));
-        session.setAuthNote(EXPIRES, Long.toString(System.currentTimeMillis() + TTL_MS));
-        session.setAuthNote(ATTEMPTS, "0");
         URI action = context.getActionUrl(context.generateAccessCode());
         String link = action.toString() + "&magic=" + magic;
         // Angle brackets stop Slack from cutting the link at the first &.
@@ -59,7 +56,17 @@ final class DsAuthCodes {
                 + "It expires in 10 minutes.\n\n"
                 + "Or open this link in the same browser:\n<"
                 + link + "|Sign in>\n";
-        return post(kind, user.getEmail(), subject, text);
+        if (!post(kind, user.getEmail(), subject, text)) {
+            return false;
+        }
+        AuthenticationSessionModel session = context.getAuthenticationSession();
+        long now = System.currentTimeMillis();
+        session.setAuthNote(CODE_HASH, hex(sha256(code)));
+        session.setAuthNote(MAGIC_HASH, hex(sha256(magic)));
+        session.setAuthNote(EXPIRES, Long.toString(now + TTL_MS));
+        session.setAuthNote(ATTEMPTS, "0");
+        session.setAuthNote(SENT_AT, Long.toString(now));
+        return true;
     }
 
     static boolean hasMagic(AuthenticationFlowContext context) {
@@ -114,6 +121,28 @@ final class DsAuthCodes {
 
     static boolean pressed(AuthenticationFlowContext context, String name) {
         return context.getHttpRequest().getDecodedFormParameters().containsKey(name);
+    }
+
+    /** Seconds until another code may be emailed. Zero means the resend button is open. */
+    static int resendWaitSeconds(AuthenticationFlowContext context) {
+        String raw = context.getAuthenticationSession().getAuthNote(SENT_AT);
+        if (raw == null) {
+            return 0;
+        }
+        try {
+            return waitSeconds(Long.parseLong(raw), System.currentTimeMillis());
+        } catch (NumberFormatException ex) {
+            return 0;
+        }
+    }
+
+    static int waitSeconds(long sentAtMillis, long nowMillis) {
+        long remainMs = sentAtMillis + RESEND_SECONDS * 1000L - nowMillis;
+        if (remainMs <= 0) {
+            return 0;
+        }
+        int seconds = (int) ((remainMs + 999L) / 1000L);
+        return Math.min(RESEND_SECONDS, seconds);
     }
 
     private static boolean fresh(AuthenticationFlowContext context) {

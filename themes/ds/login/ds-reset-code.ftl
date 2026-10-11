@@ -13,7 +13,7 @@
     <form class="stack" action="${url.loginAction}" method="post" novalidate>
       <@layout.dsOtpField />
       <button class="primary" name="login" type="submit">Continue</button>
-      <button class="secondary" name="resend" type="submit" formnovalidate>Email me a new code</button>
+      <@layout.dsResendButton />
       <a class="text-button" href="${url.loginUrl}">Back to sign in</a>
     </form>
   </#if>

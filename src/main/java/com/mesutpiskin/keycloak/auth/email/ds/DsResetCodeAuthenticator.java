@@ -40,6 +40,11 @@ public class DsResetCodeAuthenticator implements Authenticator {
             return;
         }
         if (DsAuthCodes.pressed(context, "resend")) {
+            int wait = DsAuthCodes.resendWaitSeconds(context);
+            if (wait > 0) {
+                context.challenge(form(context, "You can email a new code in " + wait + " seconds."));
+                return;
+            }
             send(context);
             return;
         }
@@ -64,7 +69,8 @@ public class DsResetCodeAuthenticator implements Authenticator {
     private Response form(AuthenticationFlowContext context, String error) {
         UserModel user = context.getUser();
         LoginFormsProvider provider = context.form()
-                .setAttribute("dsEmail", user == null ? "" : user.getEmail());
+                .setAttribute("dsEmail", user == null ? "" : user.getEmail())
+                .setAttribute("dsResendWait", DsAuthCodes.resendWaitSeconds(context));
         if (error != null) {
             provider.setError(error);
         }

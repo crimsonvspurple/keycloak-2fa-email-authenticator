@@ -62,7 +62,7 @@
         </div>
         <@layout.dsPasskeySwitch />
         <button class="primary" name="login" type="submit">Continue</button>
-        <button class="secondary" name="resend" type="submit" formnovalidate>Email me a new code</button>
+        <@layout.dsResendButton />
         <button class="text-button" name="restart" type="submit" formnovalidate>Use a different email</button>
       </form>
     <#elseif dsStep! == "credential">

@@ -38,6 +38,12 @@
     <span class="switch-copy">Create a passkey on this device</span>
   </label>
 </#macro>
+<#macro dsResendButton>
+  <#assign wait = (dsResendWait!0)?number>
+  <button class="secondary" id="resend-code" name="resend" type="submit" formnovalidate
+          data-wait="${wait?c}"<#if wait gt 0> disabled</#if>>Email me a new code<#if wait gt 0> (${(wait / 60)?int}:${(wait % 60)?string("00")})</#if></button>
+</#macro>
+
 <#macro dsOtpField>
   <div class="field otp-field">
     <label class="micro" for="code">Code</label>
@@ -237,6 +243,32 @@
       });
       apply(input.value);
       if (document.activeElement === input) arm();
+    })();
+  </script>
+  <script>
+    (function () {
+      var button = document.getElementById("resend-code");
+      if (!button) return;
+      var left = parseInt(button.getAttribute("data-wait") || "0", 10);
+      if (!left) return;
+      var label = "Email me a new code";
+      function paint() {
+        var minutes = Math.floor(left / 60);
+        var seconds = left % 60;
+        button.textContent = label + " (" + minutes + ":" + (seconds < 10 ? "0" : "") + seconds + ")";
+        button.disabled = true;
+      }
+      paint();
+      var timer = window.setInterval(function () {
+        left -= 1;
+        if (left <= 0) {
+          window.clearInterval(timer);
+          button.disabled = false;
+          button.textContent = label;
+          return;
+        }
+        paint();
+      }, 1000);
     })();
   </script>
 </body>

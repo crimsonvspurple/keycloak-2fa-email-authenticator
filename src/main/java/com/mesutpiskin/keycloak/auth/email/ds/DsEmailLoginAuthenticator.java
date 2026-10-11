@@ -84,6 +84,11 @@ public class DsEmailLoginAuthenticator implements Authenticator {
         String step = context.getAuthenticationSession().getAuthNote(STEP);
         if ("code".equals(step)) {
             if (form.containsKey("resend")) {
+                int wait = DsAuthCodes.resendWaitSeconds(context);
+                if (wait > 0) {
+                    context.challenge(codeForm(context, "You can email a new code in " + wait + " seconds."));
+                    return;
+                }
                 sendCode(context);
                 return;
             }
@@ -335,7 +340,8 @@ public class DsEmailLoginAuthenticator implements Authenticator {
         UserModel user = context.getUser();
         LoginFormsProvider form = context.form()
                 .setAttribute("dsStep", "code")
-                .setAttribute("dsEmail", user == null ? "" : user.getEmail());
+                .setAttribute("dsEmail", user == null ? "" : user.getEmail())
+                .setAttribute("dsResendWait", DsAuthCodes.resendWaitSeconds(context));
         passkeyChoice(form, context);
         if (error != null) {
             form.setError(error);
