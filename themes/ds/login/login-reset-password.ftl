@@ -3,7 +3,7 @@
   <#if section = "header">
     Reset password
   <#elseif section = "summary">
-    <p class="sub">We will send reset instructions if an account uses this email.</p>
+    <p class="sub">We will email a code and a link if an account uses this address.</p>
   <#elseif section = "form">
     <form class="stack" action="${url.loginAction}" method="post">
       <div class="field">
@@ -14,7 +14,7 @@
       <#if messagesPerField.existsError('username')>
         <p class="field-error" role="alert">${kcSanitize(messagesPerField.get('username'))?no_esc}</p>
       </#if>
-      <button class="primary" type="submit">Send reset link</button>
+      <button class="primary" type="submit">Continue</button>
       <a class="text-button" href="${url.loginUrl}">Back to sign in</a>
     </form>
   <#elseif section = "info">

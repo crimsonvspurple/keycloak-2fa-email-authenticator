@@ -141,7 +141,9 @@ html[data-theme="dark"] .theme-toggle-icon {
 
 .social a,
 .primary,
-.text-button {
+.secondary,
+.text-button,
+#authenticateWebAuthnButton {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -360,6 +362,17 @@ input[type="text"] {
 }
 
 .primary:hover { background: var(--primary-hover); }
+
+.secondary,
+#authenticateWebAuthnButton {
+  margin-top: 10px;
+  border: 1.5px solid var(--border);
+  background: var(--card);
+  color: var(--text);
+}
+
+.secondary:hover,
+#authenticateWebAuthnButton:hover { border-color: var(--primary); }
 
 .text-button {
   margin-top: 8px;
