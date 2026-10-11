@@ -37,6 +37,8 @@ public class DsEmailLoginAuthenticator implements Authenticator {
 
     static final String STEP = "ds.step";
     static final String PASSKEY_ACTION = DsPasskeyRegisterFactory.PROVIDER_ID;
+    /** Carries the passkey switch from the password page onto the code page. */
+    private static final String PASSKEY_NOTE = "ds.passkey";
 
     private static final Logger LOG = Logger.getLogger(DsEmailLoginAuthenticator.class);
 
@@ -78,6 +80,7 @@ public class DsEmailLoginAuthenticator implements Authenticator {
             passkeys.action(context);
             return;
         }
+        rememberPasskey(context);
         String step = context.getAuthenticationSession().getAuthNote(STEP);
         if ("code".equals(step)) {
             if (form.containsKey("resend")) {
@@ -250,6 +253,14 @@ public class DsEmailLoginAuthenticator implements Authenticator {
         }
     }
 
+    private void rememberPasskey(AuthenticationFlowContext context) {
+        if (DsAuthCodes.pressed(context, "create-passkey")) {
+            context.getAuthenticationSession().setAuthNote(PASSKEY_NOTE, "1");
+        } else {
+            context.getAuthenticationSession().removeAuthNote(PASSKEY_NOTE);
+        }
+    }
+
     private void offerPasskey(AuthenticationFlowContext context) {
         if (DsAuthCodes.pressed(context, "create-passkey")) {
             context.getAuthenticationSession().addRequiredAction(PASSKEY_ACTION);
@@ -278,6 +289,7 @@ public class DsEmailLoginAuthenticator implements Authenticator {
     private void restart(AuthenticationFlowContext context) {
         context.clearUser();
         context.getAuthenticationSession().removeAuthNote(STEP);
+        context.getAuthenticationSession().removeAuthNote(PASSKEY_NOTE);
         DsAuthCodes.clear(context);
         context.challenge(emailForm(context));
     }
@@ -312,6 +324,7 @@ public class DsEmailLoginAuthenticator implements Authenticator {
                 .setAttribute("dsStep", "credential")
                 .setAttribute("dsEmail", user == null ? "" : user.getEmail())
                 .setAttribute("hasPassword", hasPassword);
+        passkeyChoice(form, context);
         if (error != null) {
             form.setError(error);
         }
@@ -323,10 +336,17 @@ public class DsEmailLoginAuthenticator implements Authenticator {
         LoginFormsProvider form = context.form()
                 .setAttribute("dsStep", "code")
                 .setAttribute("dsEmail", user == null ? "" : user.getEmail());
+        passkeyChoice(form, context);
         if (error != null) {
             form.setError(error);
         }
         return form.createForm("ds-login.ftl");
+    }
+
+    private void passkeyChoice(LoginFormsProvider form, AuthenticationFlowContext context) {
+        if ("1".equals(context.getAuthenticationSession().getAuthNote(PASSKEY_NOTE))) {
+            form.setAttribute("dsPasskey", Boolean.TRUE);
+        }
     }
 
     @Override

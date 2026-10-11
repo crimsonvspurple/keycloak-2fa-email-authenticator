@@ -32,7 +32,7 @@
 <#macro dsPasskeySwitch>
   <label class="switch">
     <span class="switch-control">
-      <input name="create-passkey" type="checkbox" value="on" role="switch">
+      <input name="create-passkey" type="checkbox" value="on" role="switch"<#if dsPasskey!false> checked</#if>>
       <span class="switch-track" aria-hidden="true"></span>
     </span>
     <span class="switch-copy">Create a passkey on this device</span>
