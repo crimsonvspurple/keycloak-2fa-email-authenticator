@@ -17,7 +17,7 @@
         <#list social.providers as p>
           <a class="social-btn" id="social-${p.alias}" data-alias="${p.alias}" href="${p.loginUrl}">
             <#if p.alias == "google">
-              <img src="${url.resourcesPath}/img/google.svg" alt="" width="18" height="18">
+              <img src="${url.resourcesPath}/img/google.svg?v=${properties.dsVersion}" alt="" width="18" height="18">
             </#if>
             <span class="social-label">Continue with ${p.displayName!}</span>
           </a>

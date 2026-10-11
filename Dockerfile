@@ -17,9 +17,12 @@ COPY --from=builder /app/target/keycloak-2fa-email-authenticator-*.jar /opt/keyc
 
 # DobberSports login theme. kc.sh build only sees themes that are already in the image.
 COPY themes/ds /opt/keycloak/themes/ds
-
-# Build Keycloak to include the provider
-RUN /opt/keycloak/bin/kc.sh build
+# Git sha, so a theme deploy changes the CSS URL. Cloudflare otherwise tells
+# browsers to keep /resources/<keycloak-version>/.../ds.css for four hours.
+ARG DS_THEME_REV=dev
+RUN sed -i "s|__DS_THEME_REV__|${DS_THEME_REV}|g" /opt/keycloak/themes/ds/login/theme.properties \
+    && grep -q "dsVersion=${DS_THEME_REV}" /opt/keycloak/themes/ds/login/theme.properties \
+    && /opt/keycloak/bin/kc.sh build
 
 # Expose the port
 EXPOSE 8080

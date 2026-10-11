@@ -16,7 +16,7 @@
       document.documentElement.setAttribute("data-theme", theme);
     })();
   </script>
-  <link rel="stylesheet" href="${url.resourcesPath}/css/ds.css">
+  <link rel="stylesheet" href="${url.resourcesPath}/css/ds.css?v=${properties.dsVersion}">
   <#if scripts??>
     <#list scripts as script>
       <script src="${script}" type="text/javascript"></script>
@@ -30,7 +30,7 @@
   </button>
   <main class="wrap">
     <section class="card">
-      <img class="logo" src="${url.resourcesPath}/img/logo.png" alt="DobberSports" width="571" height="90">
+      <img class="logo" src="${url.resourcesPath}/img/logo.png?v=${properties.dsVersion}" alt="DobberSports" width="571" height="90">
       <h1 class="title"><#nested "header"></h1>
       <#nested "summary">
 
