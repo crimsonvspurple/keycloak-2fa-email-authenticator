@@ -1,0 +1,108 @@
+---
+title: Contributing
+sidebar_position: 6
+description: How to contribute — translations, bug reports, features, and pull requests
+---
+
+# Contributing
+
+Contributions are welcome. Here are the ways you can help.
+
+## Ways to Contribute
+
+| Type                 | Description                           |
+| -------------------- | ------------------------------------- |
+| **Translations**     | Add a new language — see guide below  |
+| **Bug Reports**      | Open an issue with reproduction steps |
+| **Feature Requests** | Share ideas via GitHub Issues         |
+| **Pull Requests**    | Fix bugs or implement new features    |
+
+## Contribution Guidelines
+
+```bash
+# 1. Fork and clone
+git clone https://github.com/<your-fork>/keycloak-2fa-email-authenticator.git
+
+# 2. Create a feature branch
+git checkout -b feature/my-improvement
+
+# 3. Commit
+git commit -m 'Add my improvement'
+
+# 4. Push and open a PR
+git push origin feature/my-improvement
+```
+
+**Code standards:**
+
+- Follow existing code style and conventions
+- Add comments only for non-obvious logic
+- Update docs when changing behavior
+- Test your changes before submitting
+
+---
+
+## Adding a Translation
+
+import Tabs from "@theme/Tabs";
+import TabItem from "@theme/TabItem";
+
+<Tabs>
+  <TabItem value="steps" label="Steps" default>
+
+1. Copy the English file:
+
+   ```bash
+   cd src/main/resources/theme-resources/messages/
+   cp messages_en.properties messages_<lang>.properties
+   ```
+
+2. Translate all values — **do not change the keys**:
+
+   ```properties
+   # German example
+   resendCode=Code erneut senden
+   emailOtpForm=Bitte geben Sie den {0}-stelligen Code ein, der an Ihre E-Mail-Adresse gesendet wurde.
+   ```
+
+3. Build and verify:
+
+   ```bash
+   mvn clean package
+   ```
+
+   Deploy to Keycloak, switch browser language, confirm all messages display correctly.
+
+4. Create a PR with branch name `add-<lang>-translation`.
+
+  </TabItem>
+  <TabItem value="keys" label="Translation Keys">
+
+See the [Localization page](./localization#translation-keys-reference) for the full reference of all keys with descriptions and placeholders.
+
+  </TabItem>
+</Tabs>
+
+## Existing Translations
+
+| Language              | Code    | File                        |
+| --------------------- | ------- | --------------------------- |
+| English               | `en`    | `messages_en.properties`    |
+| Turkish               | `tr`    | `messages_tr.properties`    |
+| French                | `fr`    | `messages_fr.properties`    |
+| Italian               | `it`    | `messages_it.properties`    |
+| Spanish               | `es`    | `messages_es.properties`    |
+| Danish                | `da`    | `messages_da.properties`    |
+| German                | `de`    | `messages_de.properties`    |
+| Russian               | `ru`    | `messages_ru.properties`    |
+| Azerbaijani           | `az`    | `messages_az.properties`    |
+| Arabic                | `ar`    | `messages_ar.properties`    |
+| Chinese (Traditional) | `zh_TW` | `messages_zh_TW.properties` |
+
+---
+
+## Resources
+
+- [GitHub Repository](https://github.com/mesutpiskin/keycloak-2fa-email-authenticator)
+- [Issue Tracker](https://github.com/mesutpiskin/keycloak-2fa-email-authenticator/issues)
+- [Keycloak Server Development Guide](https://www.keycloak.org/docs/latest/server_development/index.html)

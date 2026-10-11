@@ -1,0 +1,170 @@
+---
+title: Docker / Podman Deployment
+sidebar_position: 2
+description: Deploy Keycloak with the email 2FA authenticator using Docker or Podman
+---
+
+# Docker / Podman Deployment
+
+This project includes a **multi-stage Dockerfile** for containerized deployment. All commands work with both Docker and Podman — substitute as needed.
+
+## Multi-Stage Build Overview
+
+| Stage       | Base Image                         | Purpose                                       |
+| ----------- | ---------------------------------- | --------------------------------------------- |
+| **Builder** | `maven:3.9-eclipse-temurin-21`     | Compiles source and produces the provider JAR |
+| **Runtime** | `quay.io/keycloak/keycloak:26.5.3` | Copies the JAR and runs `kc.sh build`         |
+
+## Build the Image
+
+import Tabs from "@theme/Tabs";
+import TabItem from "@theme/TabItem";
+
+<Tabs>
+  <TabItem value="docker" label="Docker" default>
+
+```bash
+docker build -t keycloak-2fa-email:latest .
+```
+
+  </TabItem>
+  <TabItem value="podman" label="Podman">
+
+```bash
+podman build --tls-verify=false -t keycloak-2fa-email:latest .
+```
+
+:::note
+`--tls-verify=false` may be needed if Podman encounters certificate verification issues.
+:::
+
+  </TabItem>
+</Tabs>
+
+## Run the Container
+
+<Tabs>
+  <TabItem value="docker" label="Docker" default>
+
+```bash
+docker run -p 8080:8080 \
+  -e KEYCLOAK_ADMIN=admin \
+  -e KEYCLOAK_ADMIN_PASSWORD=admin \
+  keycloak-2fa-email:latest \
+  start-dev
+```
+
+  </TabItem>
+  <TabItem value="podman" label="Podman">
+
+```bash
+podman run -p 8080:8080 \
+  -e KEYCLOAK_ADMIN=admin \
+  -e KEYCLOAK_ADMIN_PASSWORD=admin \
+  keycloak-2fa-email:latest \
+  start-dev
+```
+
+  </TabItem>
+</Tabs>
+
+Keycloak is available at **http://localhost:8080** once started.
+
+## Using Docker Compose
+
+The project includes a `docker-compose.yml`:
+
+<Tabs>
+  <TabItem value="docker" label="Docker" default>
+
+```bash
+docker-compose up
+```
+
+  </TabItem>
+  <TabItem value="podman" label="Podman">
+
+```bash
+podman-compose up
+```
+
+  </TabItem>
+</Tabs>
+
+## Production Deployment
+
+:::warning
+`start-dev` must **not** be used in production. Use `start` with a real database and TLS certificates.
+:::
+
+<Tabs>
+  <TabItem value="docker" label="Docker" default>
+
+```bash
+docker run -d \
+  --name keycloak-prod \
+  -p 8443:8443 \
+  -e KC_HOSTNAME=keycloak.example.com \
+  -e KC_HTTPS_CERTIFICATE_FILE=/path/to/cert.pem \
+  -e KC_HTTPS_CERTIFICATE_KEY_FILE=/path/to/key.pem \
+  -e KC_DB=postgres \
+  -e KC_DB_URL=jdbc:postgresql://db/keycloak \
+  -e KC_DB_USERNAME=keycloak \
+  -e KC_DB_PASSWORD=password \
+  keycloak-2fa-email:latest \
+  start
+```
+
+  </TabItem>
+  <TabItem value="podman" label="Podman">
+
+```bash
+podman run -d \
+  --name keycloak-prod \
+  -p 8443:8443 \
+  -e KC_HOSTNAME=keycloak.example.com \
+  -e KC_HTTPS_CERTIFICATE_FILE=/path/to/cert.pem \
+  -e KC_HTTPS_CERTIFICATE_KEY_FILE=/path/to/key.pem \
+  -e KC_DB=postgres \
+  -e KC_DB_URL=jdbc:postgresql://db/keycloak \
+  -e KC_DB_USERNAME=keycloak \
+  -e KC_DB_PASSWORD=password \
+  keycloak-2fa-email:latest \
+  start
+```
+
+  </TabItem>
+</Tabs>
+
+## Container Management
+
+```bash
+# Stop
+docker stop keycloak-test
+
+# Start
+docker start keycloak-test
+
+# Remove
+docker stop keycloak-test && docker rm keycloak-test
+
+# Remove image
+docker rmi keycloak-2fa-email:latest
+```
+
+### Rebuild After Code Changes
+
+```bash
+docker build -t keycloak-2fa-email:latest .
+docker stop keycloak-test && docker rm keycloak-test
+docker run -d --name keycloak-test \
+  -p 8080:8080 \
+  -e KEYCLOAK_ADMIN=admin \
+  -e KEYCLOAK_ADMIN_PASSWORD=admin \
+  keycloak-2fa-email:latest start-dev
+```
+
+## What's Next?
+
+- [Local Testing Guide](../local-testing) — full step-by-step test walkthrough
+- [Authentication Flow Setup](../configuration/authentication-flow)

@@ -1,0 +1,95 @@
+---
+title: Get Started
+sidebar_position: 2
+description: Install and configure Keycloak 2FA Email Authenticator in under 5 minutes
+---
+
+# Get Started
+
+The fastest path to email OTP in Keycloak — no build required.
+
+## Step 1 — Prerequisites
+
+- **Keycloak 26.x** running (standard install or Docker)
+- **Java 21+** on the machine running Keycloak — [Download from Adoptium](https://adoptium.net/)
+
+## Step 2 — Download the JAR
+
+Get the latest JAR from Maven Central. Use the version that matches your Keycloak installation:
+
+import Tabs from "@theme/Tabs";
+import TabItem from "@theme/TabItem";
+
+<Tabs>
+  <TabItem value="maven" label="Maven" default>
+
+```xml
+<dependency>
+  <groupId>io.github.mesutpiskin</groupId>
+  <artifactId>keycloak-2fa-email-authenticator</artifactId>
+  <version>26.4.0-KC26.6.1</version>
+</dependency>
+```
+
+  </TabItem>
+  <TabItem value="gradle" label="Gradle">
+
+```groovy
+implementation 'io.github.mesutpiskin:keycloak-2fa-email-authenticator:26.4.0-KC26.6.1'
+```
+
+  </TabItem>
+  <TabItem value="direct" label="Direct Download">
+
+Go to [Maven Central](https://central.sonatype.com/artifact/io.github.mesutpiskin/keycloak-2fa-email-authenticator), pick your version, and download the `.jar` file.
+
+  </TabItem>
+</Tabs>
+
+:::tip Version format
+`<plugin-version>-KC<keycloak-version>` — e.g. `26.4.0-KC26.6.1` targets Keycloak 26.6.1.
+Browse all versions on [Maven Central](https://central.sonatype.com/artifact/io.github.mesutpiskin/keycloak-2fa-email-authenticator).
+:::
+
+Then copy the JAR to Keycloak's providers directory:
+
+```bash
+cp keycloak-2fa-email-authenticator-*.jar <KEYCLOAK_HOME>/providers/
+```
+
+## Step 3 — Rebuild Keycloak
+
+```bash
+<KEYCLOAK_HOME>/bin/kc.sh build
+```
+
+On Windows:
+
+```bat
+<KEYCLOAK_HOME>\bin\kc.bat build
+```
+
+Then restart Keycloak.
+
+## Step 4 — Configure the Authentication Flow
+
+1. Log in to the Keycloak admin console
+2. Go to **Authentication** → **Flows**
+3. Duplicate the **Browser** flow and add the **Email OTP** execution
+4. Bind the new flow as the Browser flow
+
+That's it — users will now receive an OTP email after entering their password.
+
+:::info Full guide
+For step-by-step screenshots and conditional flow options, see [Authentication Flow Setup](./configuration/authentication-flow).
+:::
+
+---
+
+## What's Next?
+
+- [Authentication Flow Setup](./configuration/authentication-flow) — configure the flow in detail
+- [Email Providers](./configuration/email-providers) — switch to SendGrid, AWS SES, or Mailgun
+- [Local Build Guide](./installation/local) — build from source
+- [Docker Deployment](./installation/docker) — run with Docker or Podman
+- [Troubleshooting](./troubleshooting) — common issues and fixes

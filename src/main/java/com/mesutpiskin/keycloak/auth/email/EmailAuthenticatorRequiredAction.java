@@ -3,6 +3,7 @@ package com.mesutpiskin.keycloak.auth.email;
 import java.lang.reflect.Method;
 import java.security.MessageDigest;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.jboss.logging.Logger;
@@ -12,6 +13,7 @@ import org.keycloak.authentication.RequiredActionContext;
 import org.keycloak.authentication.RequiredActionProvider;
 import org.keycloak.common.util.SecretGenerator;
 import org.keycloak.email.EmailException;
+import org.keycloak.models.AuthenticationExecutionModel;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
 import org.keycloak.models.UserModel;
@@ -47,19 +49,62 @@ public class EmailAuthenticatorRequiredAction implements RequiredActionProvider,
 
     @Override
     public void evaluateTriggers(RequiredActionContext context) {
-        // Not needed for self-service setup
+        // No automatic trigger. Enrolment is voluntary via the account console;
+        // admins who want to force enrolment can add the
+        // 'email-authenticator-setup' required action manually, or use the
+        // 'Email OTP (No Enrollment)' authenticator to skip enrolment entirely
+        // for users with an email address.
     }
 
     @Override
     public void requiredActionChallenge(RequiredActionContext context) {
-        if (userMissingEmail(context.getUser())) {
+        UserModel user = context.getUser();
+        if (userMissingEmail(user)) {
             context.challenge(context.form()
                     .setError("email-authenticator-setup-missing-email")
                     .createForm(SETUP_TEMPLATE));
             return;
         }
 
+        // When the email is already verified, Keycloak has already proven the
+        // user controls the mailbox, so the setup verification code is redundant.
+        // If the admin opted in, enrol silently without sending a code.
+        boolean autoEnrolIfEmailVerified = Boolean.parseBoolean(
+                findAuthenticatorConfig(context).get(EmailConstants.AUTO_ENROL_IF_EMAIL_VERIFIED));
+        if (autoEnrolIfEmailVerified && user.isEmailVerified()) {
+            if (hasExistingCredential(user)) {
+                user.removeRequiredAction(PROVIDER_ID);
+                context.success();
+            } else if (persistCredentialAndComplete(context, user)) {
+                logger.infof("Auto-enrolled user %s for Email 2FA (email already verified, setup code skipped)",
+                        user.getUsername());
+            }
+            return;
+        }
+
         context.challenge(context.form().createForm(SETUP_TEMPLATE));
+    }
+
+    /**
+     * Creates and stores the email-authenticator credential for the user, then
+     * completes the required action. On persistence failure, re-challenges with
+     * the setup form and returns {@code false} so callers can stop early.
+     */
+    private boolean persistCredentialAndComplete(RequiredActionContext context, UserModel user) {
+        EmailAuthenticatorCredentialModel credential = EmailAuthenticatorCredentialModel.create();
+        credential.setUserLabel(user.getEmail());
+        try {
+            user.credentialManager().createStoredCredential(credential);
+        } catch (RuntimeException ex) {
+            logger.errorf(ex, "Failed to persist email authenticator credential for user %s", user.getId());
+            context.challenge(context.form()
+                    .setError("email-authenticator-setup-error")
+                    .createForm(SETUP_TEMPLATE));
+            return false;
+        }
+        user.removeRequiredAction(PROVIDER_ID);
+        context.success();
+        return true;
     }
 
     @Override
@@ -128,18 +173,7 @@ public class EmailAuthenticatorRequiredAction implements RequiredActionProvider,
         switch (result) {
             case VALID:
                 resetSetupCode(session);
-                EmailAuthenticatorCredentialModel credential = EmailAuthenticatorCredentialModel.create();
-                credential.setUserLabel(user.getEmail());
-                try {
-                    user.credentialManager().createStoredCredential(credential);
-                    user.removeRequiredAction(PROVIDER_ID);
-                    context.success();
-                } catch (RuntimeException ex) {
-                    logger.errorf(ex, "Failed to persist email authenticator credential for user %s", user.getId());
-                    context.challenge(context.form()
-                            .setError("email-authenticator-setup-error")
-                            .createForm(SETUP_TEMPLATE));
-                }
+                persistCredentialAndComplete(context, user);
                 break;
             case EXPIRED:
                 resetSetupCode(session);
@@ -157,6 +191,9 @@ public class EmailAuthenticatorRequiredAction implements RequiredActionProvider,
                     resetSetupCode(session);
                     var form = context.form();
                     form.setAttribute("maxAttemptsReached", true);
+                    form.setAttribute("codeLength", resolvePositiveInt(configMap, EmailConstants.CODE_LENGTH,
+                            EmailConstants.DEFAULT_LENGTH));
+                    EmailMasking.applyToForm(form, user, configMap);
                     form.setError(Messages.TOO_MANY_ATTEMPTS);
                     context.challenge(form.createForm(VERIFY_TEMPLATE));
                 } else {
@@ -254,12 +291,27 @@ public class EmailAuthenticatorRequiredAction implements RequiredActionProvider,
         }
     }
 
-    private Map<String, String> findAuthenticatorConfig(RequiredActionContext context) {
+    /**
+     * Finds the Email OTP configuration enrolment uses (email provider, OTP
+     * policy, auto-enrol). Executions users enrol for are preferred, because only
+     * their configuration carries the enrolment settings. A no-enrollment
+     * execution is used only when the realm has no other, so its email provider
+     * settings still apply, for example after {@link SkipSetupMigration} has
+     * switched the realm's only Email OTP execution.
+     */
+    // Package-private for tests.
+    Map<String, String> findAuthenticatorConfig(RequiredActionContext context) {
         RealmModel realm = context.getRealm();
 
-        return realm.getAuthenticationFlowsStream()
+        List<AuthenticationExecutionModel> executions = realm.getAuthenticationFlowsStream()
                 .flatMap(flow -> realm.getAuthenticationExecutionsStream(flow.getId()))
-                .filter(exec -> EmailAuthenticatorFormFactory.PROVIDER_ID.equals(exec.getAuthenticator()))
+                .filter(exec -> AbstractEmailAuthenticatorFormFactory.isEmailAuthenticator(exec.getAuthenticator()))
+                .toList();
+
+        return executions.stream()
+                .filter(exec -> AbstractEmailAuthenticatorFormFactory.isEnrolmentCapable(exec.getAuthenticator()))
+                .findFirst()
+                .or(() -> executions.stream().findFirst())
                 .map(exec -> {
                     String configId = exec.getAuthenticatorConfig();
                     if (configId != null) {
@@ -270,7 +322,6 @@ public class EmailAuthenticatorRequiredAction implements RequiredActionProvider,
                     }
                     return Map.<String, String>of();
                 })
-                .findFirst()
                 .orElse(Map.of());
     }
 
@@ -302,6 +353,11 @@ public class EmailAuthenticatorRequiredAction implements RequiredActionProvider,
         if (remaining != null && remaining > 0L) {
             form.setAttribute("resendAvailableInSeconds", remaining);
         }
+
+        Map<String, String> configMap = findAuthenticatorConfig(context);
+        int codeLength = resolvePositiveInt(configMap, EmailConstants.CODE_LENGTH, EmailConstants.DEFAULT_LENGTH);
+        form.setAttribute("codeLength", codeLength);
+        EmailMasking.applyToForm(form, context.getUser(), configMap);
 
         if (error != null) {
             form.setError(error, errorParams);

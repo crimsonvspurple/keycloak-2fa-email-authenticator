@@ -1,0 +1,103 @@
+---
+title: Local Build & Deployment
+sidebar_position: 1
+description: Build from source with Maven and deploy to a standard or Dockerized Keycloak
+---
+
+# Local Build & Deployment
+
+Build the authenticator from source using Maven and deploy the JAR to your Keycloak installation.
+
+## Prerequisites
+
+- **Java 21+** — [Download from Adoptium](https://adoptium.net/)
+- **Maven 3.9+** — [Download from Apache](https://maven.apache.org/download.cgi)
+
+## Step 1 — Clone the Repository
+
+```bash
+git clone https://github.com/mesutpiskin/keycloak-2fa-email-authenticator.git
+cd keycloak-2fa-email-authenticator
+```
+
+## Step 2 — Verify Prerequisites
+
+```bash
+java -version  # Should show Java 21+
+mvn -version   # Should show Maven 3.9+
+```
+
+## Step 3 — Build the Project
+
+```bash
+mvn clean package
+```
+
+This produces `target/keycloak-2fa-email-authenticator-26.4.0.jar`.
+
+:::note Skip tests
+If tests fail due to Java version compatibility (e.g. Java 25+):
+
+```bash
+mvn clean package -DskipTests
+```
+
+:::
+
+## Step 4 — Deploy to Keycloak
+
+<Tabs>
+  <TabItem value="standard" label="Standard Installation" default>
+
+```bash
+cp target/keycloak-2fa-email-authenticator-*.jar <KEYCLOAK_HOME>/providers/
+```
+
+  </TabItem>
+  <TabItem value="docker" label="Dockerized Keycloak">
+
+```bash
+cp target/keycloak-2fa-email-authenticator-*.jar /opt/keycloak/providers/
+```
+
+  </TabItem>
+</Tabs>
+
+## Step 5 — Rebuild Keycloak
+
+After copying the JAR, register the provider:
+
+import Tabs from "@theme/Tabs";
+import TabItem from "@theme/TabItem";
+
+<Tabs>
+  <TabItem value="linux-mac" label="Linux / macOS" default>
+
+```bash
+<KEYCLOAK_HOME>/bin/kc.sh build
+```
+
+  </TabItem>
+  <TabItem value="windows" label="Windows">
+
+```bat
+<KEYCLOAK_HOME>\bin\kc.bat build
+```
+
+  </TabItem>
+</Tabs>
+
+## Running Tests
+
+```bash
+mvn test
+```
+
+:::note
+Tests may fail on Java 25+ due to Mockito/ByteBuddy compatibility. Use Java 21 for development.
+:::
+
+## What's Next?
+
+- [Authentication Flow Setup](../configuration/authentication-flow) — wire up the 2FA flow
+- [Email Provider Configuration](../configuration/email-providers) — choose SMTP, SendGrid, AWS SES, or Mailgun

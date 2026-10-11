@@ -2,6 +2,7 @@ package com.mesutpiskin.keycloak.auth.email.service;
 
 import com.mesutpiskin.keycloak.auth.email.model.EmailProviderType;
 import com.mesutpiskin.keycloak.auth.email.service.impl.KeycloakEmailSender;
+import com.mesutpiskin.keycloak.auth.email.service.impl.MailgunEmailSender;
 import com.mesutpiskin.keycloak.auth.email.service.impl.SendGridEmailSender;
 import org.jboss.logging.Logger;
 import org.keycloak.models.KeycloakSession;
@@ -61,8 +62,7 @@ public final class EmailSenderFactory {
                 return createAwsSesSender(config);
 
             case MAILGUN:
-                logger.warnf("Mailgun provider not yet implemented, falling back to Keycloak SMTP");
-                return new KeycloakEmailSender(session, realm, user);
+                return createMailgunSender(config);
 
             case KEYCLOAK:
             default:
@@ -128,6 +128,35 @@ public final class EmailSenderFactory {
         logger.infof("Creating AWS SES email sender in region %s with from address: %s", region, fromEmail);
         return new com.mesutpiskin.keycloak.auth.email.service.impl.AwsSesEmailSender(
                 region, accessKeyId, secretAccessKey, fromEmail, fromName);
+    }
+
+    /**
+     * Creates a Mailgun email sender with the provided configuration.
+     *
+     * @param config configuration map containing Mailgun settings
+     * @return a configured MailgunEmailSender instance
+     * @throws IllegalArgumentException if required Mailgun configuration is missing
+     */
+    private static EmailSender createMailgunSender(Map<String, String> config) {
+        String apiKey = config.get("mailgunApiKey");
+        String domain = config.get("mailgunDomain");
+        String fromEmail = config.get("mailgunFromEmail");
+        String fromName = config.get("mailgunFromName");
+        String region = config.getOrDefault("mailgunRegion", "US");
+
+        if (apiKey == null || apiKey.trim().isEmpty()) {
+            throw new IllegalArgumentException("Mailgun API key is required but not configured");
+        }
+        if (domain == null || domain.trim().isEmpty()) {
+            throw new IllegalArgumentException("Mailgun domain is required but not configured");
+        }
+        if (fromEmail == null || fromEmail.trim().isEmpty()) {
+            throw new IllegalArgumentException("Mailgun from email is required but not configured");
+        }
+
+        logger.infof("Creating Mailgun email sender for domain %s (%s region) with from address: %s",
+                domain, region, fromEmail);
+        return new MailgunEmailSender(apiKey, domain, fromEmail, fromName, region);
     }
 
     /**

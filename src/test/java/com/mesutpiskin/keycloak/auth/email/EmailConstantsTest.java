@@ -48,6 +48,13 @@ class EmailConstantsTest {
     }
 
     @Test
+    @DisplayName("Should have masked email disabled by default")
+    void testDefaultShowMaskedEmailOnOtpForm() {
+        assertFalse(EmailConstants.DEFAULT_SHOW_MASKED_EMAIL_ON_OTP_FORM,
+                "Masked email display should be disabled by default");
+    }
+
+    @Test
     @DisplayName("Should not be instantiable")
     void testUtilityClassPattern() {
         try {
@@ -76,5 +83,6 @@ class EmailConstantsTest {
         assertEquals("simulationMode", EmailConstants.SIMULATION_MODE);
         assertEquals("resendCooldown", EmailConstants.RESEND_COOLDOWN);
         assertEquals("emailCodeResendAvailableAfter", EmailConstants.CODE_RESEND_AVAILABLE_AFTER);
+        assertEquals("showMaskedEmailOnOtpForm", EmailConstants.SHOW_MASKED_EMAIL_ON_OTP_FORM);
     }
 }

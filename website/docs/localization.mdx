@@ -1,0 +1,156 @@
+---
+title: Localization
+sidebar_position: 5
+description: Supported languages, how to add a new translation, and full translation keys reference
+---
+
+# Localization
+
+The authenticator ships with 11 built-in translations. You can customize any message or add a new language by editing properties files — no code changes required.
+
+## Supported Languages
+
+| Language              | Code    | File                       | Status     |
+| --------------------- | ------- | -------------------------- | ---------- |
+| 🇬🇧 English           | `en`    | `messages_en.properties`   | ✅ Complete |
+| 🇹🇷 Turkish           | `tr`    | `messages_tr.properties`   | ✅ Complete |
+| 🇫🇷 French            | `fr`    | `messages_fr.properties`   | ✅ Complete |
+| 🇮🇹 Italian           | `it`    | `messages_it.properties`   | ✅ Complete |
+| 🇪🇸 Spanish           | `es`    | `messages_es.properties`   | ✅ Complete |
+| 🇩🇰 Danish            | `da`    | `messages_da.properties`   | ✅ Complete |
+| 🇩🇪 German            | `de`    | `messages_de.properties`   | ✅ Complete |
+| 🇷🇺 Russian           | `ru`    | `messages_ru.properties`   | ✅ Complete |
+| 🇦🇿 Azerbaijani       | `az`    | `messages_az.properties`   | ✅ Complete |
+| 🇸🇦 Arabic            | `ar`    | `messages_ar.properties`   | ✅ Complete |
+| 🇹🇼 Chinese (Trad.)   | `zh_TW` | `messages_zh_TW.properties`| ✅ Complete |
+
+All files live in:
+
+```
+src/main/resources/theme-resources/messages/
+```
+
+## How to Add a New Language
+
+### 1. Copy the English file
+
+```bash
+cd src/main/resources/theme-resources/messages/
+cp messages_en.properties messages_<code>.properties
+```
+
+Replace `<code>` with the ISO 639-1 language code (e.g. `ja` for Japanese, `pt` for Portuguese, `ko` for Korean).
+
+### 2. Translate the values
+
+Open the new file and translate every value while keeping the keys unchanged:
+
+```properties title="messages_ja.properties — example"
+resendCode=コードを再送信
+emailOtpForm=メールに送信された {0} 桁のコードを入力してください。
+
+emailCodeSubject={0} アクセスコード
+emailCodeBody=アクセスコード: {0}。\n\nこのコードは {1} 秒以内に期限切れになります。
+```
+
+:::warning Keep placeholders untouched
+Text inside curly braces — `{0}`, `{1}` — are runtime placeholders for the OTP code and expiry time. **Do not translate them.**
+:::
+
+### 3. Build and test
+
+```bash
+mvn clean package
+```
+
+Deploy the JAR, then in Keycloak switch the realm locale (or your browser language) to your new language and go through a login to verify all messages display correctly.
+
+### 4. Submit a Pull Request
+
+We welcome new translations! Follow the [Contributing guide](./contributing) to open a PR. Include the new properties file and a note about which Keycloak locale code you used.
+
+---
+
+## Translation Keys Reference
+
+All keys used by the authenticator, with descriptions and placeholders.
+
+### UI Messages
+
+These appear on the Keycloak login page and OTP entry form.
+
+| Key | Description | Placeholders |
+| --- | ----------- | ------------ |
+| `resendCode` | Button label to request a new OTP code | — |
+| `emailOtpForm` | Instruction shown above the OTP input field | `{0}` = code length (e.g. `6`) |
+| `email-authenticator-display-name` | Name shown in Keycloak's authenticator picker | — |
+| `email-authenticator-help-text` | Short description shown below the display name | — |
+| `email-authenticator-resend-cooldown` | Message shown while the resend cooldown is active | `{0}` = remaining seconds |
+| `email-authenticator-too-many-attempts` | Error shown after too many wrong attempts | — |
+
+### Setup / Enrollment Messages
+
+These appear during the optional authenticator enrollment flow (when a user sets up email 2FA for the first time).
+
+| Key | Description | Placeholders |
+| --- | ----------- | ------------ |
+| `requiredAction.email-authenticator-setup` | Label for the required action in Keycloak admin | — |
+| `email-authenticator-setup-title` | Page title of the setup screen | — |
+| `email-authenticator-setup-description` | Explanation shown on the setup screen | — |
+| `email-authenticator-setup-button` | Confirm button on the setup screen | — |
+| `email-authenticator-setup-cancelled` | Message when a user tries to cancel a required setup | — |
+| `email-authenticator-setup-error` | Generic setup failure message | — |
+| `email-authenticator-setup-missing-email` | Shown when the user account has no email address | — |
+| `email-authenticator-setup-verify-title` | Title of the email verification step during setup | — |
+| `email-authenticator-setup-verify-description` | Instructions on the verification step | — |
+| `email-authenticator-setup-verify-button` | Submit button on the verification step | — |
+| `email-authenticator-setup-send-error` | Shown when the verification email fails to send | — |
+| `email-authenticator-setup-code-expired` | Shown when the setup verification code has expired | — |
+| `email-authenticator-setup-code-invalid` | Shown when the entered code is wrong | — |
+| `email-authenticator-setup-code-missing` | Shown when the user submits without entering a code | — |
+| `email-authenticator-setup-too-many-attempts` | Shown after too many wrong attempts during setup | — |
+
+### Email Messages
+
+These control the subject line and body of the OTP email itself.
+
+| Key | Description | Placeholders |
+| --- | ----------- | ------------ |
+| `emailCodeSubject` | Email subject line | `{0}` = OTP code |
+| `emailCodeBody` | Plain-text email body | `{0}` = OTP code, `{1}` = TTL in seconds |
+| `emailCodeBodyHtml` | HTML email body (used when HTML sending is enabled) | `{0}` = OTP code, `{1}` = TTL in seconds |
+
+### Full English Reference
+
+```properties title="messages_en.properties"
+resendCode=Resend Code
+emailOtpForm=Please enter the {0} digit code that was delivered to your email.
+
+emailCodeSubject={0} access code
+emailCodeBody=Access code: {0}.\n\nThis code will expire within {1} seconds.
+emailCodeBodyHtml=<p>Access code: <strong>{0}</strong>.</p><p>This code will expire within <strong>{1}</strong> seconds.</p>
+
+email-authenticator-display-name=Email Authenticator
+email-authenticator-help-text=Receive a one-time verification code by email.
+requiredAction.email-authenticator-setup=Set up Email Authenticator
+email-authenticator-setup-title=Set up Email Authenticator
+email-authenticator-setup-description=Use this option to receive one-time verification codes via email during sign-in.
+email-authenticator-setup-button=Enable Email Authenticator
+email-authenticator-setup-cancelled=Email authenticator setup cannot be cancelled.
+email-authenticator-setup-error=We couldn''t enable Email Authenticator. Try again or contact support.
+email-authenticator-setup-missing-email=Add an email address to your account before enabling Email Authenticator.
+email-authenticator-resend-cooldown=Please wait {0} seconds before requesting a new code.
+email-authenticator-setup-verify-title=Verify your email
+email-authenticator-setup-verify-description=Enter the verification code sent to your email address.
+email-authenticator-setup-verify-button=Verify
+email-authenticator-setup-send-error=Failed to send verification email. Please try again.
+email-authenticator-setup-code-expired=The verification code has expired. Please request a new one.
+email-authenticator-setup-code-invalid=The verification code is incorrect. Please try again.
+email-authenticator-setup-code-missing=Please enter the verification code.
+email-authenticator-setup-too-many-attempts=Too many incorrect attempts. Please request a new code.
+email-authenticator-too-many-attempts=Too many incorrect attempts. Please request a new code.
+```
+
+:::tip Single quotes in properties files
+Notice `couldn''t` — properties files require single quotes to be escaped by doubling them (`''`). Keep this in mind when translating strings that contain apostrophes.
+:::

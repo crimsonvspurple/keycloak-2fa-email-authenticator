@@ -1,0 +1,306 @@
+---
+title: Local Testing
+sidebar_position: 4
+description: Step-by-step guide for testing the authenticator locally with Docker or Podman
+---
+
+# Local Testing Guide
+
+Comprehensive guide for testing Keycloak Email Authenticator locally using Docker or Podman.
+
+## Prerequisites
+
+- Docker **or** Podman installed
+- Java 21 + Maven installed
+- Port 8080 available
+
+:::note
+All commands work with both Docker and Podman — substitute as needed.
+:::
+
+## Quick Start
+
+```bash
+# 1. Build the JAR (macOS: set JAVA_HOME if needed)
+# macOS:  export JAVA_HOME=$(/usr/libexec/java_home -v 21)
+# Linux:  export JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64
+# Windows: set JAVA_HOME=C:\Program Files\Eclipse Adoptium\jdk-21...
+mvn clean package
+
+# 2. Build image
+docker build -t keycloak-email-auth:latest .
+
+# 3. Run container
+docker run -d --name keycloak-test \
+  -p 8080:8080 \
+  -e KEYCLOAK_ADMIN=admin \
+  -e KEYCLOAK_ADMIN_PASSWORD=admin \
+  keycloak-email-auth:latest start-dev
+
+# 4. View logs
+docker logs -f keycloak-test
+
+# 5. Admin console → http://localhost:8080/admin  (admin / admin)
+```
+
+---
+
+import Tabs from "@theme/Tabs";
+import TabItem from "@theme/TabItem";
+
+## Method 1: Compose
+
+<Tabs>
+  <TabItem value="docker" label="Docker Compose" default>
+
+```bash
+mvn clean package
+docker-compose up --build
+```
+
+  </TabItem>
+  <TabItem value="podman" label="Podman Compose">
+
+```bash
+mvn clean package
+podman-compose up --build
+```
+
+  </TabItem>
+</Tabs>
+
+Open **http://localhost:8080** — username `admin`, password `admin`.
+
+## Method 2: Manual Build
+
+### Build Image
+
+<Tabs>
+  <TabItem value="docker" label="Docker" default>
+
+```bash
+docker build -t keycloak-email-auth:latest .
+```
+
+  </TabItem>
+  <TabItem value="podman" label="Podman">
+
+```bash
+podman build -t keycloak-email-auth:latest .
+```
+
+  </TabItem>
+</Tabs>
+
+The image build:
+
+1. Compiles the JAR with Maven
+2. Copies the JAR to `/opt/keycloak/providers/`
+3. Runs `kc.sh build` to register the provider
+
+### Run & Watch Logs
+
+<Tabs>
+  <TabItem value="docker" label="Docker" default>
+
+```bash
+docker run -d --name keycloak-test \
+  -p 8080:8080 \
+  -e KEYCLOAK_ADMIN=admin \
+  -e KEYCLOAK_ADMIN_PASSWORD=admin \
+  keycloak-email-auth:latest start-dev
+
+docker logs -f keycloak-test
+```
+
+  </TabItem>
+  <TabItem value="podman" label="Podman">
+
+```bash
+podman run -d --name keycloak-test \
+  -p 8080:8080 \
+  -e KEYCLOAK_ADMIN=admin \
+  -e KEYCLOAK_ADMIN_PASSWORD=admin \
+  keycloak-email-auth:latest start-dev
+
+podman logs -f keycloak-test
+```
+
+  </TabItem>
+</Tabs>
+
+Successful startup:
+
+```
+Keycloak 26.5.3 on JVM (powered by Quarkus)
+Running the server in development mode.
+```
+
+---
+
+## Keycloak Setup
+
+### 1. Create a Realm
+
+1. Admin console → dropdown top-left → **"Create Realm"**
+2. Name: `test` → **"Create"**
+
+### 2. Configure Email
+
+**Realm Settings → Email:**
+
+| Field          | Example                |
+| -------------- | ---------------------- |
+| From           | `noreply@example.com`  |
+| Host           | `smtp.gmail.com`       |
+| Port           | `587`                  |
+| Enable StarTLS | ON                     |
+| Username       | `your-email@gmail.com` |
+| Password       | your App Password      |
+
+:::tip Gmail
+Create an [App Password](https://myaccount.google.com/apppasswords) — requires 2FA enabled on your Google account.
+:::
+
+### 3. Create Test User
+
+**Users → Add User:**
+
+- Username: `testuser`
+- Email: a real address you can receive mail at
+- Email Verified: ON
+
+**Credentials → Set Password:** `test123`, Temporary: OFF
+
+### 4. Create Authentication Flow
+
+1. **Authentication → Flows** → select **"Browser"** → **"Copy"** → name `"Browser with Email OTP"`
+2. Select **"Browser with Email OTP Forms"** → **"Add step"** → **"Email OTP"** → **"Add"**
+3. Set requirement to **REQUIRED**
+4. **Bindings** tab → Browser Flow → `"Browser with Email OTP"` → **"Save"**
+
+### 5. Configure OTP Settings
+
+Click **⚙️** on the **"Email OTP"** row:
+
+| Setting                        | Value   |
+| ------------------------------ | ------- |
+| Code length                    | `6`     |
+| Time-to-live                   | `300`   |
+| Simulation mode                | `false` |
+| Resend cooldown                | `30`    |
+| Max code attempts              | `5`     |
+| Show Masked Email on OTP Form  | `true`  |
+
+---
+
+## Test Scenarios
+
+### Test 1 — Basic OTP Flow
+
+1. Go to http://localhost:8080/realms/test/account
+2. Login: `testuser` / `test123`
+3. Check email for OTP → enter code → login succeeds ✅
+
+### Test 2 — Code Expiration
+
+1. Login, receive code
+2. Wait 5+ minutes, enter the expired code
+3. Expected: **"Code expired"** error ❌
+
+### Test 3 — Resend Code
+
+1. Login, receive code
+2. Click **"Resend code"** within 30 s → cooldown message
+3. After 30 s → new code sent ✅
+
+### Test 4 — Invalid Code
+
+1. Login, enter a wrong code
+2. Expected: **"Invalid code"** error ❌
+
+### Test 5 — Simulation Mode
+
+Enable **Simulation mode** in OTP settings, then:
+
+```bash
+podman logs -f keycloak-test | grep "SIMULATION MODE"
+# ***** SIMULATION MODE ***** Email code send to test@example.com for user testuser is: 123456
+```
+
+### Test 6 — Masked Email Display
+
+1. In **Authentication → Flows**, open **⚙️** settings for **Email OTP**
+2. Enable **Show Masked Email on OTP Form**
+3. Login as `testuser`
+4. Expected: the OTP screen shows a masked destination such as `t***r@example.com`
+5. Confirm the full email address is not displayed
+6. Start enrollment of the email authenticator
+7. Expected: the verification screen shows the same masked destination
+
+### Test 7 — Language Support
+
+Verify that all 11 built-in translations display correctly.
+
+**Enable internationalization in Keycloak:**
+
+1. Admin console → your realm → **Realm Settings** → **Localization** tab
+2. Enable **Internationalization**
+3. Add the languages you want to test (e.g. `fr`, `de`, `ar`)
+4. Set a **Default Locale**
+5. Save
+
+**Test a specific language:**
+
+1. Open the login page: `http://localhost:8080/realms/test/account`
+2. A language selector appears at the bottom of the form — pick a language
+3. Log in as `testuser` and go through the OTP step
+4. Verify that the form labels, button text, and OTP email subject/body are all in the selected language
+
+**Supported languages:** English · Turkish · German · French · Italian · Spanish · Russian · Arabic · Danish · Azerbaijani · Chinese (Traditional)
+
+:::tip
+For right-to-left languages (Arabic), also verify that the Keycloak login page renders the layout correctly in RTL mode.
+:::
+
+---
+
+## Troubleshooting
+
+### Container not running
+
+```bash
+podman ps -a
+podman logs keycloak-test
+podman stop keycloak-test && podman rm keycloak-test
+```
+
+### Provider not loaded
+
+```bash
+podman exec -it keycloak-test ls -la /opt/keycloak/providers/
+# Expected: keycloak-2fa-email-authenticator-26.4.0.jar
+```
+
+### Email not sending
+
+1. **Realm Settings → Email → "Test connection"**
+2. Enable simulation mode and inspect logs
+3. Gmail: use App Password, not regular password
+
+### Port 8080 in use
+
+```bash
+podman run -d -p 8081:8080 \
+  -e KEYCLOAK_ADMIN=admin -e KEYCLOAK_ADMIN_PASSWORD=admin \
+  keycloak-email-auth:latest start-dev
+# Access at http://localhost:8081
+```
+
+---
+
+## References
+
+- [Keycloak Documentation](https://www.keycloak.org/docs/latest/)
+- [Podman Documentation](https://docs.podman.io/)
+- [GitHub Issues](https://github.com/mesutpiskin/keycloak-2fa-email-authenticator/issues)

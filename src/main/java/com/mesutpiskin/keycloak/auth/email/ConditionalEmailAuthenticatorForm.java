@@ -277,7 +277,7 @@ public class ConditionalEmailAuthenticatorForm extends EmailAuthenticatorForm {
         if (roleName == null) {
             return false;
         }
-
+        
         RoleModel role = getRoleFromString(realm, roleName);
         if (role != null) {
             return user.hasRole(role);

@@ -1,0 +1,190 @@
+---
+title: Email Providers
+sidebar_position: 2
+description: Configure Keycloak SMTP, SendGrid, AWS SES, or Mailgun as the OTP email provider
+---
+
+# Email Providers
+
+The authenticator supports four email providers. You choose one per authentication flow and can enable automatic fallback to Keycloak SMTP.
+
+## Supported Providers
+
+| Provider                    | Description                          | Requirements                        |
+| --------------------------- | ------------------------------------ | ----------------------------------- |
+| **Keycloak SMTP** (Default) | Uses Keycloak's built-in SMTP config | Realm SMTP settings configured      |
+| **SendGrid**                | SendGrid cloud email service         | API key + verified sender           |
+| **AWS SES**                 | Amazon Simple Email Service          | IAM credentials + verified identity |
+| **Mailgun**                 | Mailgun email delivery               | API key + sending domain            |
+
+## Configure Provider
+
+1. Navigate to **Authentication** → **Flows**
+2. Select your custom flow with the **Email OTP** authenticator
+3. Click **⚙️** next to **Email OTP**
+4. Set the provider and credentials (see options below)
+
+import Tabs from "@theme/Tabs";
+import TabItem from "@theme/TabItem";
+
+<Tabs>
+  <TabItem value="smtp" label="Keycloak SMTP" default>
+
+```
+Email Provider: KEYCLOAK
+Enable Fallback to Keycloak SMTP: true
+```
+
+No credentials needed — uses **Realm Settings → Email**.
+
+  </TabItem>
+  <TabItem value="sendgrid" label="SendGrid">
+
+```
+Email Provider: SENDGRID
+SendGrid API Key: SG.xxxxxxxxxxxxxxxxxxxx
+SendGrid From Email: noreply@yourdomain.com
+SendGrid From Name: Your Company Name  (optional)
+Enable Fallback to Keycloak SMTP: true  (recommended)
+```
+
+### SendGrid Setup
+
+1. Sign up at [sendgrid.com](https://sendgrid.com/)
+2. **Settings** → **API Keys** → **Create API Key** (needs _Mail Send_ permission)
+3. **Settings** → **Sender Authentication** — verify your sender email or domain
+4. Enter the key and verified address in Keycloak
+
+  </TabItem>
+  <TabItem value="ses" label="AWS SES">
+
+```
+Email Provider: AWS_SES
+AWS SES Region: us-east-1
+AWS Access Key ID: AKIAIOSFODNN7EXAMPLE
+AWS Secret Access Key: wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
+AWS SES From Email: noreply@yourdomain.com
+AWS SES From Name: Your Company Name  (optional)
+Enable Fallback to Keycloak SMTP: true  (recommended)
+```
+
+### AWS SES Setup
+
+1. **IAM** → create a user with `AmazonSESFullAccess` (or `ses:SendEmail`). Save the access key pair.
+2. **SES Console** → **Verified identities** → verify your sender email or domain (DNS records required for domain).
+3. **Sandbox mode**: by default SES only sends to verified addresses. [Request production access](https://docs.aws.amazon.com/ses/latest/dg/request-production-access.html) to send to any recipient.
+4. Choose a region close to your users — verified identities are region-specific.
+
+  </TabItem>
+  <TabItem value="mailgun" label="Mailgun">
+
+```
+Email Provider: MAILGUN
+Mailgun API Key: key-xxxxxxxxxxxxxxxxxxxx
+Mailgun Domain: mg.yourdomain.com
+Mailgun From Email: noreply@yourdomain.com
+Mailgun From Name: Your Company Name  (optional)
+Mailgun Region: US  (or EU for European accounts)
+Enable Fallback to Keycloak SMTP: true  (recommended)
+```
+
+### Mailgun Setup
+
+1. Sign up at [mailgun.com](https://www.mailgun.com/)
+2. **Settings** → **API Keys** → **Add new key** — copy the Private API key (starts with `key-`).
+3. **Sending** → **Domains** → **Add New Domain** — use `mg.yourdomain.com` and complete DNS verification.
+4. Region:
+   - Account at `app.mailgun.com` → **US**
+   - Account at `app.eu.mailgun.com` → **EU**
+
+  </TabItem>
+</Tabs>
+
+## Fallback Mechanism
+
+When **Enable Fallback to Keycloak SMTP** is on:
+
+- If the primary provider fails, the system automatically retries via Keycloak's realm SMTP
+- Ensures delivery even when a 3rd-party service is temporarily unavailable
+- Fallback events are logged for monitoring
+
+:::tip Best practice
+Always enable fallback in production. Configure realm SMTP as the safety net regardless of which primary provider you use.
+:::
+
+## Troubleshooting
+
+### Emails are not being delivered
+
+**1. Verify realm SMTP first**
+
+Before blaming the provider integration, confirm the base SMTP configuration works:
+
+1. **Realm Settings** → **Email** → click **"Test connection"**
+2. A test email is sent to the admin account — if this fails, fix SMTP before proceeding
+
+**2. Enable Simulation Mode temporarily**
+
+In the OTP authenticator settings, set **Simulation mode** to `true`. Codes will appear in the Keycloak server logs instead of being sent:
+
+```bash
+docker logs keycloak | grep "SIMULATION MODE"
+# ***** SIMULATION MODE ***** Email code send to user@example.com is: 123456
+```
+
+If codes appear in the logs, Keycloak is running correctly — the problem is with the email provider configuration.
+
+**3. Check Keycloak logs for provider errors**
+
+```bash
+docker logs keycloak 2>&1 | grep -i "email\|provider\|sendgrid\|ses\|mailgun"
+```
+
+---
+
+### Provider-specific issues
+
+<Tabs>
+  <TabItem value="sendgrid" label="SendGrid">
+
+| Symptom | Likely cause | Fix |
+|---------|-------------|-----|
+| `403 Forbidden` | Sender not verified | Verify sender identity in SendGrid dashboard |
+| `401 Unauthorized` | Invalid API key | Regenerate key with _Mail Send_ permission |
+| Emails land in spam | No domain authentication | Set up domain authentication (SPF/DKIM) in SendGrid |
+
+  </TabItem>
+  <TabItem value="ses" label="AWS SES">
+
+| Symptom | Likely cause | Fix |
+|---------|-------------|-----|
+| `MessageRejected` | Sending to unverified address | In Sandbox mode, only verified recipients are allowed — [request production access](https://docs.aws.amazon.com/ses/latest/dg/request-production-access.html) |
+| `InvalidClientTokenId` | Wrong access key | Double-check `AWS Access Key ID` and `Secret Access Key` |
+| `SignatureDoesNotMatch` | Clock skew | Ensure the server clock is synchronized (NTP) |
+| `IllegalArgumentException: region` | Invalid region string | Use format `us-east-1`, not `US East (N. Virginia)` |
+
+  </TabItem>
+  <TabItem value="mailgun" label="Mailgun">
+
+| Symptom | Likely cause | Fix |
+|---------|-------------|-----|
+| `401 Unauthorized` | Wrong API key | Use the **Private** API key, not the Public key |
+| `Domain not found` | Wrong domain | Check **Sending → Domains** for the exact domain string |
+| Emails bounce | Domain not verified | Complete DNS verification (MX, TXT, CNAME records) |
+| No delivery, no error | Wrong region | Match region to your account: `app.mailgun.com` → US, `app.eu.mailgun.com` → EU |
+
+  </TabItem>
+  <TabItem value="smtp" label="Keycloak SMTP">
+
+| Symptom | Likely cause | Fix |
+|---------|-------------|-----|
+| `Connection refused` | Wrong host/port | Confirm host and port, try port 465 (SSL) if 587 (TLS) fails |
+| `Authentication failed` | Wrong credentials | For Gmail, use an [App Password](https://myaccount.google.com/apppasswords), not your account password |
+| `Certificate error` | Untrusted TLS cert | Enable **SSL** or **StarTLS** in Realm Settings → Email |
+
+  </TabItem>
+</Tabs>
+
+---
+
+For issues not covered here, see the [Troubleshooting guide](../troubleshooting) or [open an issue](https://github.com/mesutpiskin/keycloak-2fa-email-authenticator/issues).

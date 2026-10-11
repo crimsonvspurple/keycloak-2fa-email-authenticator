@@ -5,10 +5,11 @@
     <#elseif section="form">
         <form id="kc-email-authenticator-setup-verify-form" class="${properties.kcFormClass!}" action="${url.loginAction}"
             method="post">
+            <#assign otpLength = (codeLength!6)>
 
             <div class="${properties.kcFormGroupClass!}">
                 <div class="${properties.kcLabelWrapperClass!}">
-                    <label for="emailCode" class="${properties.kcLabelClass!}">${msg("email-authenticator-setup-verify-description")}</label>
+                    <label for="emailCode" class="${properties.kcLabelClass!}">${msg("email-authenticator-setup-verify-description", otpLength)}<#if maskedEmail??> <strong>${maskedEmail}</strong></#if></label>
                 </div>
 
             <div class="${properties.kcInputWrapperClass!}">

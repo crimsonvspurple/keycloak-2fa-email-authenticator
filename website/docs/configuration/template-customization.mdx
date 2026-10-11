@@ -1,0 +1,81 @@
+---
+title: Template Customization
+sidebar_position: 3
+description: Customize OTP email HTML layout, subject, body text, and localization
+---
+
+# Template Customization
+
+Fully customize the visual appearance (HTML) and text content of OTP emails, with support for 11 languages.
+
+## 1. HTML Layout
+
+**File:** `src/main/resources/theme-resources/templates/html/code-email.ftl`
+
+Replace the default FreeMarker template with your own HTML structure.
+
+**Available template variables:**
+
+| Variable  | Description                |
+| --------- | -------------------------- |
+| `${code}` | The generated OTP code     |
+| `${ttl}`  | Expiration time in seconds |
+
+```html title="code-email.ftl — example"
+<html>
+  <body style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
+    <div
+      style="background-color: #f5f5f5; padding: 30px; border-radius: 8px; text-align: center;"
+    >
+      <img
+        src="https://your-domain.com/logo.png"
+        alt="Logo"
+        style="height: 50px; margin-bottom: 20px;"
+      />
+      <h2 style="color: #007bff;">Verification Code</h2>
+      <div
+        style="background-color: white; padding: 20px; margin: 20px 0; border: 1px solid #ddd;"
+      >
+        <h1 style="font-size: 36px; letter-spacing: 5px; margin: 0;">
+          ${code}
+        </h1>
+      </div>
+      <p>This code expires in <strong>${ttl}</strong> seconds.</p>
+      <p style="font-size: 12px; color: #888;">
+        If you didn't request this, ignore this email.
+      </p>
+    </div>
+  </body>
+</html>
+```
+
+## 2. Text Content & Localization
+
+**File:** `src/main/resources/theme-resources/messages/messages_<lang>.properties`
+
+**Placeholders:**
+
+| Placeholder | Value                             |
+| ----------- | --------------------------------- |
+| `{0}`       | The OTP code                      |
+| `{1}`       | Expiration time (seconds/minutes) |
+
+```properties title="messages_en.properties — example"
+emailCodeSubject=Your Secure Login Code: {0}
+emailCodeBody=Here is your one-time password: {0}.\n\nValid for {1} minutes. Do not share this code.
+```
+
+:::important Rebuild required
+After editing templates or properties files, rebuild and redeploy: `mvn clean package`.
+:::
+
+## Supported Languages & Adding Translations
+
+The authenticator ships with 11 built-in languages. For the full list, how to add a new language, and a complete translation keys reference, see the [Localization guide](../localization).
+
+
+## OTP Login Form Note
+
+If you want to show the destination email address on the OTP login or enrollment screen, prefer the built-in authenticator setting **Show masked email on OTP form** instead of relying on `${user.email!}` in the FreeMarker template.
+
+When that setting is enabled, a server-generated `maskedEmail` value is passed to the form template. This is more reliable across Keycloak versions because the login template context does not always expose a populated `user` object during the OTP step.

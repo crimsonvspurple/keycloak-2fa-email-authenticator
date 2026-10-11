@@ -1,0 +1,85 @@
+---
+title: For AI Agents
+sidebar_position: 3
+description: Machine-readable context and integration guides for AI coding assistants and chat agents
+---
+
+# For AI Agents
+
+Using an AI assistant to work with this project? This page gives you everything you need to get it up to speed quickly.
+
+import Tabs from "@theme/Tabs";
+import TabItem from "@theme/TabItem";
+
+<Tabs>
+  <TabItem value="editor" label="Editor Agents (Cursor, Copilot, Windsurf...)" default>
+
+Editor agents that support the [`llms.txt`](https://llmstxt.org) standard can auto-discover project context from a single URL.
+
+**llms.txt URL:**
+
+```
+https://mesutpiskin.github.io/keycloak-2fa-email-authenticator/llms.txt
+```
+
+**Using with Cursor:**
+
+Add the URL via **Cursor Settings → Features → Docs → Add new doc** and paste the URL above. Cursor will index it and make it available in `@Docs` references in chat.
+
+**Using with other editors:**
+
+Paste the URL into your editor's "Add documentation source" or equivalent feature. The file follows the standard [`llms.txt`](https://llmstxt.org) format and is plain text.
+
+  </TabItem>
+  <TabItem value="chat" label="Chat Agents (Claude, ChatGPT, Gemini...)">
+
+Copy the block below and paste it at the start of your conversation to give your AI assistant full context about this project.
+
+```
+## Project Context: Keycloak 2FA Email Authenticator
+
+This is a Keycloak SPI plugin that adds email-based OTP as a second authentication
+factor. It integrates with Keycloak's authentication flow system and supports four
+email providers: Keycloak SMTP (default), SendGrid, AWS SES, and Mailgun.
+
+### Installation (fastest path — no build required)
+1. Download the JAR from Maven Central:
+   - groupId:    io.github.mesutpiskin
+   - artifactId: keycloak-2fa-email-authenticator
+   - version:    26.4.0-KC26.6.1  (format: <plugin-version>-KC<keycloak-version>)
+2. Copy the JAR to <KEYCLOAK_HOME>/providers/
+3. Run: <KEYCLOAK_HOME>/bin/kc.sh build
+4. Restart Keycloak
+
+### Configure the authentication flow
+- Keycloak admin → Authentication → Flows
+- Duplicate the Browser flow
+- Add "Email OTP" execution inside the Forms sub-flow
+- Set requirement to REQUIRED (all users) or use "Conditional Email OTP" for role-based 2FA
+- Bind the new flow as the Browser flow
+
+### Key authenticator settings (click ⚙️ on the Email OTP row)
+- Email Provider:                    KEYCLOAK | SENDGRID | AWS_SES | MAILGUN
+- Code length:                       6 (digits)
+- Time-to-live:                      300 (seconds)
+- Simulation mode:                   false — set true in dev to log codes instead of sending emails
+- Resend cooldown:                   30 (seconds)
+- Max code attempts:                 5
+- Enable Fallback to Keycloak SMTP:  true (recommended in production)
+
+### Provider credentials
+- SendGrid:  API key (starts with SG.) + verified from-email
+- AWS SES:   Access Key ID + Secret Access Key + region + verified from-email
+- Mailgun:   Private API key (starts with key-) + sending domain + region (US or EU)
+
+### Source layout
+- src/main/java/                                          → authenticator SPI implementation
+- src/main/resources/theme-resources/templates/html/     → email HTML template (FreeMarker, variables: ${code}, ${ttl})
+- src/main/resources/theme-resources/messages/           → i18n .properties files (en, tr, fr, de, es, it, da, ru, az, ar, zh_TW)
+
+### Full documentation
+https://mesutpiskin.github.io/keycloak-2fa-email-authenticator/
+```
+
+  </TabItem>
+</Tabs>

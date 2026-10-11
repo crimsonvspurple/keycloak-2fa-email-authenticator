@@ -1,14 +1,37 @@
 package com.mesutpiskin.keycloak.auth.email;
 
+import jakarta.ws.rs.core.MultivaluedHashMap;
+import jakarta.ws.rs.core.Response;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.keycloak.authentication.AuthenticationFlowContext;
+import org.keycloak.authentication.AuthenticationFlowError;
+import org.keycloak.authentication.AuthenticationFlowException;
+import org.keycloak.authentication.CredentialValidator;
+import org.keycloak.common.ClientConnection;
+import org.keycloak.events.EventBuilder;
+import org.keycloak.forms.login.LoginFormsProvider;
+import org.keycloak.http.HttpRequest;
+import org.keycloak.models.AuthenticationExecutionModel;
+import org.keycloak.models.AuthenticatorConfigModel;
 import org.keycloak.models.KeycloakSession;
+import org.keycloak.models.KeycloakUriInfo;
 import org.keycloak.models.RealmModel;
+import org.keycloak.models.SubjectCredentialManager;
 import org.keycloak.models.UserModel;
+import org.keycloak.services.managers.BruteForceProtector;
 import org.keycloak.sessions.AuthenticationSessionModel;
+import org.mockito.invocation.Invocation;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 /**
@@ -59,34 +82,98 @@ class EmailAuthenticatorFormTest {
     }
 
     @Test
-    @DisplayName("Should be configured for user with valid credential")
-    void testConfiguredFor_withValidSetup() {
+    @DisplayName("configuredFor returns true when the user has a stored email-authenticator credential")
+    void testConfiguredFor_withStoredCredential() {
         KeycloakSession session = mock(KeycloakSession.class);
         RealmModel realm = mock(RealmModel.class);
         UserModel user = mock(UserModel.class);
+        SubjectCredentialManager cm = mock(SubjectCredentialManager.class);
+        when(user.getEmail()).thenReturn("alice@example.com");
+        when(user.credentialManager()).thenReturn(cm);
+        when(cm.getStoredCredentialsByTypeStream(EmailAuthenticatorCredentialModel.TYPE_ID))
+                .thenReturn(Stream.of(new EmailAuthenticatorCredentialModel()));
 
-        // This test verifies the method can be called without exceptions
-        assertDoesNotThrow(() -> {
-            try {
-                authenticator.configuredFor(session, realm, user);
-            } catch (NullPointerException e) {
-                // Expected when credential provider is not available
-                // This is acceptable for unit test
-            }
-        });
+        assertTrue(authenticator.configuredFor(session, realm, user),
+                "An enrolled user must be reported as configured");
     }
 
     @Test
-    @DisplayName("Should set required action on user")
-    void testSetRequiredActions() {
+    @DisplayName("configuredFor returns false when the user has no email")
+    void testConfiguredFor_userWithoutEmail() {
+        KeycloakSession session = mock(KeycloakSession.class);
+        RealmModel realm = mock(RealmModel.class);
+        UserModel user = mock(UserModel.class);
+        when(user.getEmail()).thenReturn(null);
+
+        assertFalse(authenticator.configuredFor(session, realm, user),
+                "Users without an email cannot use the email authenticator");
+    }
+
+    @Test
+    @DisplayName("configuredFor returns false for blank emails")
+    void testConfiguredFor_blankEmail() {
+        KeycloakSession session = mock(KeycloakSession.class);
+        RealmModel realm = mock(RealmModel.class);
+        UserModel user = mock(UserModel.class);
+        when(user.getEmail()).thenReturn("   ");
+
+        assertFalse(authenticator.configuredFor(session, realm, user),
+                "Blank emails should be treated as no email");
+    }
+
+    @Test
+    @DisplayName("configuredFor returns false for users with email but no stored credential — regression test for unwanted email-OTP prompt in Conditional - User Configured sub-flows (issue #108 follow-up)")
+    void testConfiguredFor_userWithEmail_noStoredCredential_returnsFalse() {
+        KeycloakSession session = mock(KeycloakSession.class);
+        RealmModel realm = mock(RealmModel.class);
+        UserModel user = mock(UserModel.class);
+        SubjectCredentialManager cm = mock(SubjectCredentialManager.class);
+        when(user.getEmail()).thenReturn("alice@example.com");
+        when(user.credentialManager()).thenReturn(cm);
+        when(cm.getStoredCredentialsByTypeStream(EmailAuthenticatorCredentialModel.TYPE_ID))
+                .thenReturn(Stream.empty());
+
+        assertFalse(authenticator.configuredFor(session, realm, user),
+                "A non-enrolled user must not be reported as configured — otherwise 'Conditional - User Configured' sub-flows trigger unexpectedly");
+        verifyNoInteractions(realm);
+    }
+
+    @Test
+    @DisplayName("configuredFor returns false when the user has a stored credential but no email")
+    void testConfiguredFor_storedCredential_noEmail_returnsFalse() {
+        KeycloakSession session = mock(KeycloakSession.class);
+        RealmModel realm = mock(RealmModel.class);
+        UserModel user = mock(UserModel.class);
+        when(user.getEmail()).thenReturn(null);
+
+        assertFalse(authenticator.configuredFor(session, realm, user),
+                "A credential cannot rescue a user with no email — the authenticator has nowhere to send the code");
+    }
+
+    @Test
+    @DisplayName("configuredFor returns false for a null user")
+    void testConfiguredFor_nullUser_returnsFalse() {
+        assertFalse(authenticator.configuredFor(mock(KeycloakSession.class), mock(RealmModel.class), null));
+    }
+
+    @Test
+    @DisplayName("Is a CredentialValidator, so Keycloak lists it under 'Try Another Way' only for enrolled users")
+    void testIsCredentialValidator() {
+        assertInstanceOf(CredentialValidator.class, authenticator,
+                "The enrolled variant must stay credential-based; the no-enrollment variant covers the other case");
+    }
+
+    @Test
+    @DisplayName("setRequiredActions is a no-op; the login flow never triggers enrolment")
+    void testSetRequiredActions_isNoOp() {
         KeycloakSession session = mock(KeycloakSession.class);
         RealmModel realm = mock(RealmModel.class);
         UserModel user = mock(UserModel.class);
 
         authenticator.setRequiredActions(session, realm, user);
 
-        // Verify that addRequiredAction was called with the correct provider ID
-        verify(user).addRequiredAction(EmailAuthenticatorRequiredAction.PROVIDER_ID);
+        verify(user, never()).addRequiredAction(EmailAuthenticatorRequiredAction.PROVIDER_ID);
+        verify(user, never()).addRequiredAction(anyString());
     }
 
     @Test
@@ -112,6 +199,269 @@ class EmailAuthenticatorFormTest {
         public String testDisabledByBruteForceError() {
             return disabledByBruteForceError();
         }
+    }
+
+    /**
+     * Bypasses enabledUser (requires full Keycloak infra) to isolate brute-force logic.
+     */
+    static class BfpTestableForm extends EmailAuthenticatorForm {
+        @Override
+        public boolean enabledUser(AuthenticationFlowContext context, UserModel user) {
+            return true;
+        }
+    }
+
+    @Nested
+    @DisplayName("Brute force protection — Keycloak BFP vs lib counter")
+    class BruteForceProtectionTests {
+
+        private BfpTestableForm form;
+        private AuthenticationFlowContext context;
+        private AuthenticationSessionModel session;
+        private RealmModel realm;
+        private UserModel user;
+        private LoginFormsProvider loginForm;
+        private BruteForceProtector protector;
+        private ClientConnection connection;
+        private KeycloakUriInfo uriInfo;
+
+        @BeforeEach
+        void setUp() {
+            form = new BfpTestableForm();
+            context = mock(AuthenticationFlowContext.class);
+            session = mock(AuthenticationSessionModel.class);
+            realm = mock(RealmModel.class);
+            user = mock(UserModel.class);
+            loginForm = mock(LoginFormsProvider.class);
+
+            when(context.getUser()).thenReturn(user);
+            when(context.getAuthenticationSession()).thenReturn(session);
+            when(context.getRealm()).thenReturn(realm);
+
+            protector = mock(BruteForceProtector.class);
+            connection = mock(ClientConnection.class);
+            uriInfo = mock(KeycloakUriInfo.class);
+            KeycloakSession keycloakSession = mock(KeycloakSession.class);
+            when(context.getSession()).thenReturn(keycloakSession);
+            when(keycloakSession.getProvider(BruteForceProtector.class)).thenReturn(protector);
+            when(context.getConnection()).thenReturn(connection);
+            when(context.getUriInfo()).thenReturn(uriInfo);
+
+            HttpRequest httpRequest = mock(HttpRequest.class);
+            MultivaluedHashMap<String, String> formData = new MultivaluedHashMap<>();
+            formData.putSingle(EmailConstants.CODE, "000000"); // wrong code — stored is hash("123456")
+            when(context.getHttpRequest()).thenReturn(httpRequest);
+            when(httpRequest.getDecodedFormParameters()).thenReturn(formData);
+
+            when(session.getAuthNote(EmailConstants.CODE)).thenReturn(OtpHashUtils.hash("123456"));
+            when(session.getAuthNote(EmailConstants.CODE_TTL))
+                    .thenReturn(String.valueOf(System.currentTimeMillis() + 300_000));
+            when(session.getAuthNote(EmailConstants.CODE_RESEND_AVAILABLE_AFTER)).thenReturn(null);
+            when(session.getAuthNote("emailCodeAttempts")).thenReturn(null);
+
+            EventBuilder event = mock(EventBuilder.class);
+            when(context.getEvent()).thenReturn(event);
+            when(event.user(any(UserModel.class))).thenReturn(event);
+
+            AuthenticationExecutionModel execution = mock(AuthenticationExecutionModel.class);
+            when(context.getExecution()).thenReturn(execution);
+            when(execution.getId()).thenReturn("test-exec");
+            when(context.form()).thenReturn(loginForm);
+            when(loginForm.setExecution(anyString())).thenReturn(loginForm);
+            when(loginForm.setAttribute(anyString(), any())).thenReturn(loginForm);
+            when(loginForm.addError(any())).thenReturn(loginForm);
+            when(loginForm.createForm(anyString())).thenReturn(mock(Response.class));
+
+            AuthenticatorConfigModel config = mock(AuthenticatorConfigModel.class);
+            when(context.getAuthenticatorConfig()).thenReturn(config);
+            when(config.getConfig()).thenReturn(Map.of(EmailConstants.MAX_ATTEMPTS, "5"));
+        }
+
+        /**
+         * {@code failedLogin} takes the category as a {@code String} on Keycloak 26.6
+         * and as a {@code Set<String>} from 26.7, so a direct {@code verify} only
+         * compiles against one of them. Checking the recorded call works on both.
+         */
+        private void verifyFailureReportedAsOtp() {
+            List<Invocation> calls = mockingDetails(protector).getInvocations().stream()
+                    .filter(invocation -> invocation.getMethod().getName().equals("failedLogin"))
+                    .toList();
+            assertEquals(1, calls.size(), "failedLogin calls");
+
+            Object[] args = calls.get(0).getArguments();
+            assertSame(realm, args[0]);
+            assertSame(user, args[1]);
+            assertSame(connection, args[2]);
+            assertSame(uriInfo, args[3]);
+            assertTrue("otp".equals(args[4]) || Set.of("otp").equals(args[4]),
+                    "reported under " + args[4]);
+        }
+
+        @Test
+        @DisplayName("Realm brute force protection on: the attempt counter still runs and the failure is reported as otp")
+        void testKeycloakBfpActive_incrementsAttemptsAndReportsFailure() {
+            when(realm.isBruteForceProtected()).thenReturn(true);
+
+            form.action(context);
+
+            verify(session).setAuthNote("emailCodeAttempts", "1");
+            verifyFailureReportedAsOtp();
+            verify(context).failureChallenge(eq(AuthenticationFlowError.INVALID_CREDENTIALS), any());
+        }
+
+        @Test
+        @DisplayName("A correct code is accepted as an otp success, so Keycloak clears the secondary-factor counter the wrong codes fed")
+        void testCorrectCode_succeedsAsOtp() {
+            when(realm.isBruteForceProtected()).thenReturn(true);
+            MultivaluedHashMap<String, String> formData = new MultivaluedHashMap<>();
+            formData.putSingle(EmailConstants.CODE, "123456");
+            when(context.getHttpRequest().getDecodedFormParameters()).thenReturn(formData);
+
+            form.action(context);
+
+            verify(context).success("otp");
+            verify(context, never()).success();
+            verify(context, never()).failureChallenge(any(), any());
+            verifyNoInteractions(protector);
+        }
+
+        @Test
+        @DisplayName("Realm brute force protection on: at the limit the code is invalidated, and that attempt still counts towards the lockout")
+        void testKeycloakBfpActive_maxAttemptsReached_resetsCodeAndReportsFailure() {
+            when(realm.isBruteForceProtected()).thenReturn(true);
+            when(session.getAuthNote("emailCodeAttempts")).thenReturn("4"); // next = 5 = max
+
+            form.action(context);
+
+            verify(session).setAuthNote("emailCodeAttempts", "5");
+            verify(session).removeAuthNote(EmailConstants.CODE);
+            verify(loginForm).setAttribute("maxAttemptsReached", true);
+            verifyFailureReportedAsOtp();
+            verify(context).failureChallenge(eq(AuthenticationFlowError.INVALID_CREDENTIALS), any());
+        }
+
+        @Test
+        @DisplayName("Keycloak BFP inactif — le compteur de la lib doit être incrémenté")
+        void testKeycloakBfpInactive_incrementsAttempts() {
+            when(realm.isBruteForceProtected()).thenReturn(false);
+
+            form.action(context);
+
+            verify(session).setAuthNote("emailCodeAttempts", "1");
+            verify(context).failureChallenge(eq(AuthenticationFlowError.INVALID_CREDENTIALS), any());
+            verifyNoInteractions(protector);
+        }
+
+        @Test
+        @DisplayName("Keycloak BFP inactif — seuil atteint : code réinitialisé et flag maxAttemptsReached positionné")
+        void testKeycloakBfpInactive_maxAttemptsReached_resetsCode() {
+            when(realm.isBruteForceProtected()).thenReturn(false);
+            when(session.getAuthNote("emailCodeAttempts")).thenReturn("4"); // prochain = 5 = max
+
+            form.action(context);
+
+            verify(session).setAuthNote("emailCodeAttempts", "5");
+            verify(session).removeAuthNote(EmailConstants.CODE);
+            verify(loginForm).setAttribute("maxAttemptsReached", true);
+            verify(context).failureChallenge(eq(AuthenticationFlowError.INVALID_CREDENTIALS), any());
+            verifyNoInteractions(protector);
+        }
+    }
+
+
+    @Nested
+    @DisplayName("Masked email exposure tests")
+    class MaskedEmailExposureTests {
+
+        private BfpTestableForm form;
+        private AuthenticationFlowContext context;
+        private UserModel user;
+        private AuthenticationSessionModel session;
+        private LoginFormsProvider loginForm;
+        private AuthenticationExecutionModel execution;
+        private AuthenticatorConfigModel config;
+
+        @BeforeEach
+        void setUp() {
+            form = new BfpTestableForm();
+            context = mock(AuthenticationFlowContext.class);
+            user = mock(UserModel.class);
+            session = mock(AuthenticationSessionModel.class);
+            loginForm = mock(LoginFormsProvider.class);
+            execution = mock(AuthenticationExecutionModel.class);
+            config = mock(AuthenticatorConfigModel.class);
+
+            when(context.getUser()).thenReturn(user);
+            when(context.getAuthenticationSession()).thenReturn(session);
+            when(context.form()).thenReturn(loginForm);
+            when(context.getExecution()).thenReturn(execution);
+            when(execution.getId()).thenReturn("test-exec");
+            when(loginForm.setExecution(anyString())).thenReturn(loginForm);
+            when(loginForm.setAttribute(anyString(), any())).thenReturn(loginForm);
+            when(loginForm.createForm(anyString())).thenReturn(mock(Response.class));
+            when(context.getAuthenticatorConfig()).thenReturn(config);
+            when(session.getAuthNote(EmailConstants.CODE)).thenReturn(OtpHashUtils.hash("123456"));
+            when(session.getAuthNote(EmailConstants.CODE_TTL)).thenReturn(String.valueOf(System.currentTimeMillis() + 300_000));
+            when(session.getAuthNote(EmailConstants.CODE_RESEND_AVAILABLE_AFTER)).thenReturn(null);
+        }
+
+        @Test
+        @DisplayName("Should expose masked email when enabled")
+        void shouldExposeMaskedEmailWhenEnabled() {
+            when(user.getEmail()).thenReturn("username@example.com");
+            when(config.getConfig()).thenReturn(Map.of(
+                    EmailConstants.SHOW_MASKED_EMAIL_ON_OTP_FORM, "true",
+                    EmailConstants.CODE_LENGTH, "6"));
+
+            form.authenticate(context);
+
+            verify(loginForm).setAttribute("maskedEmail", "u***e@example.com");
+        }
+
+        @Test
+        @DisplayName("Should not expose masked email when disabled")
+        void shouldNotExposeMaskedEmailWhenDisabled() {
+            when(user.getEmail()).thenReturn("username@example.com");
+            when(config.getConfig()).thenReturn(Map.of(
+                    EmailConstants.SHOW_MASKED_EMAIL_ON_OTP_FORM, "false",
+                    EmailConstants.CODE_LENGTH, "6"));
+
+            form.authenticate(context);
+
+            verify(loginForm, never()).setAttribute(eq("maskedEmail"), any());
+        }
+
+        @Test
+        @DisplayName("Should expose masked email for short local parts")
+        void shouldExposeMaskedEmailForShortLocalParts() {
+            when(user.getEmail()).thenReturn("ab@example.com");
+            when(config.getConfig()).thenReturn(Map.of(
+                    EmailConstants.SHOW_MASKED_EMAIL_ON_OTP_FORM, "true",
+                    EmailConstants.CODE_LENGTH, "6"));
+
+            form.authenticate(context);
+
+            verify(loginForm).setAttribute("maskedEmail", "a***@example.com");
+        }
+    }
+
+    @Test
+    @DisplayName("A config whose map is null does not cause a NullPointerException when the code is generated")
+    void testNullConfigMap_noNullPointerException() {
+        AuthenticationFlowContext context = mock(AuthenticationFlowContext.class);
+        AuthenticationSessionModel session = mock(AuthenticationSessionModel.class);
+        AuthenticatorConfigModel config = mock(AuthenticatorConfigModel.class);
+        UserModel user = mock(UserModel.class);
+        when(context.getAuthenticationSession()).thenReturn(session);
+        when(context.getAuthenticatorConfig()).thenReturn(config);
+        when(config.getConfig()).thenReturn(null);
+        when(context.getUser()).thenReturn(user);
+        when(context.getRealm()).thenReturn(mock(RealmModel.class));
+        when(user.getEmail()).thenReturn(null);
+
+        // With no email the send step rejects the user; before the fix this
+        // failed earlier with a NullPointerException on the simulation-mode check.
+        assertThrows(AuthenticationFlowException.class, () -> authenticator.authenticate(context));
     }
 
     @Test
