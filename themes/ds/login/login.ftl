@@ -127,7 +127,9 @@
         }
         if (social) {
           social.addEventListener("click", rememberSocial);
-          social.addEventListener("auxclick", rememberSocial);
+          social.addEventListener("auxclick", function (event) {
+            if (event.button === 1) rememberSocial(event);
+          });
         }
         var form = document.getElementById("kc-form-login");
         if (form) form.addEventListener("submit", function () { write("password"); });
