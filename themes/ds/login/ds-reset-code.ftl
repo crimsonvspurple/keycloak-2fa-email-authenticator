@@ -11,11 +11,7 @@
       </p>
     </#if>
     <form class="stack" action="${url.loginAction}" method="post" novalidate>
-      <div class="field">
-        <label class="micro" for="code">Code</label>
-        <input id="code" name="code" type="text" inputmode="numeric" autocomplete="one-time-code"
-               pattern="[0-9 ]{6,8}" maxlength="8" autofocus required>
-      </div>
+      <@layout.dsOtpField />
       <button class="primary" name="login" type="submit">Continue</button>
       <button class="secondary" name="resend" type="submit" formnovalidate>Email me a new code</button>
       <a class="text-button" href="${url.loginUrl}">Back to sign in</a>

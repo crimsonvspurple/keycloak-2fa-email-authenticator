@@ -29,6 +29,30 @@
   <#if id == "geek-web"><#return "https://new-geek.dobbersports.com"></#if>
   <#return "">
 </#function>
+<#macro dsPasskeySwitch>
+  <label class="switch">
+    <span class="switch-control">
+      <input name="create-passkey" type="checkbox" value="on" role="switch">
+      <span class="switch-track" aria-hidden="true"></span>
+    </span>
+    <span class="switch-copy">Create a passkey on this device</span>
+  </label>
+</#macro>
+<#macro dsOtpField>
+  <div class="field otp-field">
+    <label class="micro" for="code">Code</label>
+    <div class="otp">
+      <#list 1..6 as _digit>
+        <span class="otp-cell" aria-hidden="true"><span class="otp-digit"></span></span>
+      </#list>
+      <input id="code" class="otp-input" name="code" type="text" inputmode="numeric"
+             autocomplete="one-time-code" enterkeyhint="done"
+             autocapitalize="off" autocorrect="off" spellcheck="false"
+             pattern="[0-9]{6}" maxlength="8" autofocus required
+             aria-label="6-digit code">
+    </div>
+  </div>
+</#macro>
 <#macro registrationLayout bodyClass="" displayInfo=false displayMessage=true displayRequiredFields=false pageTitle="Sign in">
 <!DOCTYPE html>
 <html lang="${lang}" data-theme="light">
@@ -68,9 +92,6 @@
   </button>
   <main class="wrap">
     <section class="card">
-      <#if dsSiteUrl()?has_content>
-        <a class="back-link" href="${dsSiteUrl()}">Go back to ${dsSiteName()}</a>
-      </#if>
       <img class="logo" src="${url.resourcesPath}/img/logo.png?v=${properties.dsVersion}" alt="DobberSports" width="571" height="90">
       <h1 class="title"><#nested "header"></h1>
       <#nested "summary">
@@ -106,6 +127,9 @@
         <div class="info"><#nested "info"></div>
       </#if>
     </section>
+    <#if dsSiteUrl()?has_content>
+      <a class="back-link" href="${dsSiteUrl()}">Cancel and go back to ${dsSiteName()}</a>
+    </#if>
   </main>
   <script>
     (function () {
@@ -127,6 +151,92 @@
         try { localStorage.setItem(key, next); } catch (e) {}
         apply(next);
       });
+    })();
+  </script>
+  <script>
+    (function () {
+      var input = document.getElementById("code");
+      if (!input || !input.classList.contains("otp-input")) return;
+      var root = input.closest(".otp");
+      var cells = root ? root.querySelectorAll(".otp-cell") : [];
+      var form = input.form;
+      var submitter = form ? form.querySelector("button.primary[type='submit']") : null;
+      var sent = false;
+      function digits(value) {
+        return String(value || "").replace(/\D/g, "").slice(0, 6);
+      }
+      function paint(code) {
+        var active = code.length < 6 ? code.length : -1;
+        for (var i = 0; i < cells.length; i++) {
+          var digit = cells[i].querySelector(".otp-digit");
+          if (digit) digit.textContent = code.charAt(i) || "";
+          cells[i].classList.toggle("filled", i < code.length);
+          cells[i].classList.toggle("active", i === active);
+        }
+      }
+      function finish() {
+        if (sent || !form) return;
+        sent = true;
+        window.setTimeout(function () {
+          if (digits(input.value).length !== 6) {
+            sent = false;
+            return;
+          }
+          try {
+            if (submitter && form.requestSubmit) form.requestSubmit(submitter);
+            else form.submit();
+          } catch (e) {
+            sent = false;
+          }
+        }, 0);
+      }
+      function apply(raw) {
+        var code = digits(raw);
+        if (input.value !== code) input.value = code;
+        paint(code);
+        if (code.length === 6) finish();
+        else sent = false;
+      }
+      input.addEventListener("input", function () { apply(input.value); });
+      input.addEventListener("change", function () { apply(input.value); });
+      input.addEventListener("paste", function (event) {
+        var text = event.clipboardData && event.clipboardData.getData("text");
+        if (text == null) return;
+        event.preventDefault();
+        apply(text);
+      });
+      var watch = 0;
+      function arm() {
+        if (watch) return;
+        var last = digits(input.value);
+        var tries = 0;
+        watch = window.setInterval(function () {
+          tries += 1;
+          var code = digits(input.value);
+          if (code !== last) {
+            last = code;
+            apply(code);
+          }
+          if (sent || tries > 40) {
+            window.clearInterval(watch);
+            watch = 0;
+          }
+        }, 100);
+      }
+      input.addEventListener("focus", function () {
+        if (root) root.classList.add("is-focus");
+        paint(digits(input.value));
+        arm();
+      });
+      input.addEventListener("blur", function () {
+        if (root) root.classList.remove("is-focus");
+        if (watch) {
+          window.clearInterval(watch);
+          watch = 0;
+        }
+      });
+      apply(input.value);
+      if (document.activeElement === input) arm();
     })();
   </script>
 </body>

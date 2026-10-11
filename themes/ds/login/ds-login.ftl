@@ -38,7 +38,7 @@
   <#elseif section = "form">
     <#if dsStep! == "email" && enableWebAuthnConditionalUI?has_content>
       <@passkeys.conditionalUIData />
-      <p class="passkey-note">No passkey yet? Sign in, then tick Create a passkey.</p>
+      <p class="passkey-note">No passkey yet? Sign in, then turn on Create a passkey.</p>
     </#if>
     <#if message?has_content && (message.type != 'warning' || !isAppInitiatedAction??)>
       <p class="alert alert-${message.type}" role="${(message.type = 'error')?then('alert','status')}">
@@ -48,11 +48,7 @@
 
     <#if dsStep! == "code">
       <form class="stack" id="kc-form-login" action="${url.loginAction}" method="post" novalidate>
-        <div class="field">
-          <label class="micro" for="code">Code</label>
-          <input id="code" name="code" type="text" inputmode="numeric" autocomplete="one-time-code"
-                 pattern="[0-9 ]{6,8}" maxlength="8" autofocus required>
-        </div>
+        <@layout.dsOtpField />
         <button class="text-button" type="button" id="show-set-password">Set a password</button>
         <div id="set-password" hidden>
           <div class="field">
@@ -64,10 +60,7 @@
             <input id="password-confirm" name="password-confirm" type="password" autocomplete="new-password">
           </div>
         </div>
-        <label class="check">
-          <input name="create-passkey" type="checkbox" value="on">
-          Create a passkey on this device
-        </label>
+        <@layout.dsPasskeySwitch />
         <button class="primary" name="login" type="submit">Continue</button>
         <button class="secondary" name="resend" type="submit" formnovalidate>Email me a new code</button>
         <button class="text-button" name="restart" type="submit" formnovalidate>Use a different email</button>
@@ -92,10 +85,7 @@
         <#else>
           <button class="primary" name="email-code" type="submit">Email me a code</button>
         </#if>
-        <label class="check">
-          <input name="create-passkey" type="checkbox" value="on">
-          Create a passkey on this device
-        </label>
+        <@layout.dsPasskeySwitch />
         <button class="text-button" name="restart" type="submit" formnovalidate>Use a different email</button>
       </form>
     <#else>

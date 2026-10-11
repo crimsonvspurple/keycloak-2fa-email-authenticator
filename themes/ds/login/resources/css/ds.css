@@ -97,8 +97,10 @@ html[data-theme="dark"] .theme-toggle-icon {
 .wrap {
   min-height: 100vh;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 16px;
   padding: 72px 20px 32px;
 }
 
@@ -116,15 +118,18 @@ html[data-theme="dark"] .theme-toggle-icon {
   align-items: center;
   justify-content: center;
   width: 100%;
-  min-height: 40px;
-  margin-bottom: 18px;
-  padding: 0 14px;
+  max-width: 400px;
+  min-height: 44px;
+  margin: 0;
+  padding: 8px 14px;
   border: 1.5px solid var(--border);
   border-radius: 10px;
   background: var(--card);
   color: var(--text);
   font-size: 14px;
   font-weight: 650;
+  line-height: 1.3;
+  text-align: center;
   text-decoration: none;
 }
 
@@ -333,7 +338,7 @@ form.login-grid > input[type="hidden"] { display: none; }
 
 input[type="email"],
 input[type="password"],
-input[type="text"] {
+input[type="text"]:not(.otp-input) {
   width: 100%;
   height: 44px;
   padding: 0 12px;
@@ -342,6 +347,137 @@ input[type="text"] {
   background: transparent;
   color: var(--text);
   font: inherit;
+}
+
+.otp {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.otp-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 52px;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text);
+  font-size: 22px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+.otp.is-focus .otp-cell.active {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 22%, transparent);
+}
+
+.otp.is-focus .otp-cell.active:not(.filled)::after {
+  content: "";
+  width: 1.5px;
+  height: 1.15em;
+  border-radius: 1px;
+  background: var(--text);
+}
+
+.otp input.otp-input {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: transparent;
+  caret-color: transparent;
+  font-size: 16px;
+  letter-spacing: 0;
+}
+
+.otp input.otp-input:focus,
+.otp input.otp-input:focus-visible {
+  outline: none;
+}
+
+.switch {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+  min-height: 44px;
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.35;
+  cursor: pointer;
+}
+
+.switch-control {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  flex: none;
+}
+
+.switch input {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 44px;
+  height: 24px;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.switch-track {
+  position: relative;
+  display: block;
+  width: 44px;
+  height: 24px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--muted) 28%, var(--card));
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.switch-track::after {
+  content: "";
+  position: absolute;
+  top: 1px;
+  left: 1px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.28);
+  transition: transform 0.15s ease;
+}
+
+.switch input:checked + .switch-track {
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
+.switch input:checked + .switch-track::after {
+  transform: translateX(20px);
+}
+
+.switch input:focus-visible + .switch-track {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.switch-copy { min-width: 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  .switch-track,
+  .switch-track::after { transition: none; }
 }
 
 .password-row { position: relative; }
