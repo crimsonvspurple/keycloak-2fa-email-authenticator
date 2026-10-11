@@ -26,7 +26,7 @@ public class DsEmailLoginAuthenticatorFactory implements AuthenticatorFactory {
 
     @Override
     public String getHelpText() {
-        return "Asks for an email, then a password or an emailed code and same-browser link. Does not create an account.";
+        return "Asks for an email. A new email creates an account and sends a code. A password and a passkey are optional.";
     }
 
     @Override

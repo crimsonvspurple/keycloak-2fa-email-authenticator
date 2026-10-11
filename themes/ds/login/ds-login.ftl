@@ -13,14 +13,14 @@
     </#if>
   <#elseif section = "summary">
     <#if dsStep! == "code">
-      <p class="sub">We sent a code and a link for <span class="attempted">${dsEmail!}</span>. The link works in this browser.</p>
+      <p class="sub">We sent a code and a link for <span class="attempted">${dsEmail!}</span>. The link works in this browser. The code confirms this email.</p>
     <#elseif dsStep! == "credential">
       <p class="sub"><span class="attempted">${dsEmail!}</span></p>
       <#if !hasPassword!false>
-        <p class="sub">This account has no password. Email yourself a code, or set one.</p>
+        <p class="sub">This account has no password. A code signs you in, and you can set a password on that page.</p>
       </#if>
     <#else>
-      <p class="sub">Use your DobberSports account.</p>
+      <p class="sub">Enter your email. A new address gets an account and a sign-in code. Google does the same.</p>
     </#if>
   <#elseif section = "socialProviders">
     <#if dsStep! == "email" && social.providers?? && social.providers?has_content>
@@ -38,6 +38,7 @@
   <#elseif section = "form">
     <#if dsStep! == "email" && enableWebAuthnConditionalUI?has_content>
       <@passkeys.conditionalUIData />
+      <p class="passkey-note">No passkey yet? Sign in, then tick Create a passkey.</p>
     </#if>
     <#if message?has_content && (message.type != 'warning' || !isAppInitiatedAction??)>
       <p class="alert alert-${message.type}" role="${(message.type = 'error')?then('alert','status')}">
@@ -52,19 +53,36 @@
           <input id="code" name="code" type="text" inputmode="numeric" autocomplete="one-time-code"
                  pattern="[0-9 ]{6,8}" maxlength="8" autofocus required>
         </div>
+        <button class="text-button" type="button" id="show-set-password">Set a password</button>
+        <div id="set-password" hidden>
+          <div class="field">
+            <label class="micro" for="password-new">New password</label>
+            <input id="password-new" name="password-new" type="password" autocomplete="new-password">
+          </div>
+          <div class="field">
+            <label class="micro" for="password-confirm">Confirm password</label>
+            <input id="password-confirm" name="password-confirm" type="password" autocomplete="new-password">
+          </div>
+        </div>
+        <label class="check">
+          <input name="create-passkey" type="checkbox" value="on">
+          Create a passkey on this device
+        </label>
         <button class="primary" name="login" type="submit">Continue</button>
         <button class="secondary" name="resend" type="submit" formnovalidate>Email me a new code</button>
         <button class="text-button" name="restart" type="submit" formnovalidate>Use a different email</button>
       </form>
     <#elseif dsStep! == "credential">
       <form class="stack" id="kc-form-login" action="${url.loginAction}" method="post" novalidate>
+        <#if hasPassword!false>
         <div class="field">
           <label class="micro" for="password">Password</label>
           <div class="password-row">
-            <input id="password" name="password" type="password" autocomplete="current-password" <#if hasPassword!false>autofocus required</#if>>
+            <input id="password" name="password" type="password" autocomplete="current-password" autofocus required>
             <button class="ghost" type="button" id="password-toggle" aria-label="Show password">Show</button>
           </div>
         </div>
+        </#if>
         <#if hasPassword!false>
           <button class="primary" id="kc-login" name="login" type="submit">Sign in</button>
           <button class="secondary" name="email-code" type="submit" formnovalidate>Email me a code</button>
@@ -73,11 +91,11 @@
           </#if>
         <#else>
           <button class="primary" name="email-code" type="submit">Email me a code</button>
-          <#if realm.resetPasswordAllowed>
-            <a class="text-button" href="${url.loginResetCredentialsUrl}">Set a password</a>
-          </#if>
-          <button class="secondary" id="kc-login" name="login" type="submit" formnovalidate>Sign in with a password</button>
         </#if>
+        <label class="check">
+          <input name="create-passkey" type="checkbox" value="on">
+          Create a passkey on this device
+        </label>
         <button class="text-button" name="restart" type="submit" formnovalidate>Use a different email</button>
       </form>
     <#else>
@@ -95,9 +113,6 @@
                  value="${attempted}" required>
         </div>
         <button class="primary" name="continue" type="submit">Continue</button>
-        <#if realm.registrationAllowed && url.registrationUrl?has_content>
-          <p class="register-note">New to DobberSports? <a href="${url.registrationUrl}">Create an account</a>. A new Google email creates one too.</p>
-        </#if>
         <#if realm.resetPasswordAllowed>
           <a class="text-button" href="${url.loginResetCredentialsUrl}">Forgot password</a>
         </#if>
@@ -177,6 +192,16 @@
         }
         var signIn = document.getElementById("kc-login");
         if (signIn) signIn.addEventListener("click", function () { write("password"); });
+        var showPassword = document.getElementById("show-set-password");
+        var setPassword = document.getElementById("set-password");
+        if (showPassword && setPassword) {
+          showPassword.addEventListener("click", function () {
+            setPassword.hidden = false;
+            showPassword.hidden = true;
+            var field = document.getElementById("password-new");
+            if (field) field.focus();
+          });
+        }
       })();
     </script>
   </#if>

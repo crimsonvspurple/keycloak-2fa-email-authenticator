@@ -30,12 +30,22 @@ public class DsResetCodeAuthenticator implements Authenticator {
 
     @Override
     public void action(AuthenticationFlowContext context) {
+        // The link is a GET of the action URL, so Keycloak calls action(), not authenticate().
+        if (DsAuthCodes.hasMagic(context)) {
+            if (DsAuthCodes.magicMatches(context)) {
+                context.success();
+                return;
+            }
+            context.challenge(form(context, "That link is no longer valid. Enter the code instead."));
+            return;
+        }
         if (DsAuthCodes.pressed(context, "resend")) {
             send(context);
             return;
         }
         String error = DsAuthCodes.rejectCode(context, DsAuthCodes.formValue(context, "code"));
         if (error == null) {
+            DsAuthCodes.clear(context);
             context.success();
             return;
         }

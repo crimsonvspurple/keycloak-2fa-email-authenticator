@@ -53,12 +53,18 @@ final class DsAuthCodes {
         session.setAuthNote(ATTEMPTS, "0");
         URI action = context.getActionUrl(context.generateAccessCode());
         String link = action.toString() + "&magic=" + magic;
+        // Angle brackets stop Slack from cutting the link at the first &.
         String text = intro + "\n\n"
                 + "Your code is " + code + ".\n"
                 + "It expires in 10 minutes.\n\n"
-                + "Or open this link in the same browser:\n"
-                + link + "\n";
+                + "Or open this link in the same browser:\n<"
+                + link + "|Sign in>\n";
         return post(kind, user.getEmail(), subject, text);
+    }
+
+    static boolean hasMagic(AuthenticationFlowContext context) {
+        String magic = context.getHttpRequest().getUri().getQueryParameters().getFirst("magic");
+        return magic != null && !magic.isBlank();
     }
 
     static boolean magicMatches(AuthenticationFlowContext context) {
@@ -90,7 +96,7 @@ final class DsAuthCodes {
         boolean ok = code.matches("\\d{6}")
                 && constantEquals(context.getAuthenticationSession().getAuthNote(CODE_HASH), hex(sha256(code)));
         if (ok) {
-            clear(context);
+            // The caller clears the notes after any extra checks, such as an optional password.
             return null;
         }
         if (attempts >= MAX_ATTEMPTS) {
@@ -131,7 +137,7 @@ final class DsAuthCodes {
         }
     }
 
-    private static void clear(AuthenticationFlowContext context) {
+    static void clear(AuthenticationFlowContext context) {
         AuthenticationSessionModel session = context.getAuthenticationSession();
         session.removeAuthNote(CODE_HASH);
         session.removeAuthNote(MAGIC_HASH);

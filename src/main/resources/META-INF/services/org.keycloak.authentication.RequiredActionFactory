@@ -1,1 +1,2 @@
 com.mesutpiskin.keycloak.auth.email.EmailAuthenticatorRequiredActionFactory
+com.mesutpiskin.keycloak.auth.email.ds.DsPasskeyRegisterFactory

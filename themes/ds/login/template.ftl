@@ -1,3 +1,34 @@
+<#function dsSiteName>
+  <#if !client??>
+    <#return "">
+  </#if>
+  <#local raw = (client.name!"")?trim>
+  <#if raw?ends_with(" web")>
+    <#local raw = raw?substring(0, raw?length - 4)>
+  </#if>
+  <#local id = (client.clientId!"")>
+  <#if raw?has_content && raw != id>
+    <#return raw>
+  </#if>
+  <#if id == "gp-web"><#return "Goaliepost"></#if>
+  <#if id == "dn-web"><#return "Dobbernomics"></#if>
+  <#if id == "geek-web"><#return "Geek"></#if>
+  <#return raw>
+</#function>
+<#function dsSiteUrl>
+  <#if !client??>
+    <#return "">
+  </#if>
+  <#local base = (client.baseUrl!"")?trim>
+  <#if base?has_content && base != "/">
+    <#return base?remove_ending("/")>
+  </#if>
+  <#local id = (client.clientId!"")>
+  <#if id == "gp-web"><#return "https://new.goaliepost.com"></#if>
+  <#if id == "dn-web"><#return "https://new.dobbernomics.com"></#if>
+  <#if id == "geek-web"><#return "https://new-geek.dobbersports.com"></#if>
+  <#return "">
+</#function>
 <#macro registrationLayout bodyClass="" displayInfo=false displayMessage=true displayRequiredFields=false pageTitle="Sign in">
 <!DOCTYPE html>
 <html lang="${lang}" data-theme="light">
@@ -17,6 +48,13 @@
     })();
   </script>
   <link rel="stylesheet" href="${url.resourcesPath}/css/ds.css?v=${properties.dsVersion}">
+  <script type="importmap">
+    {
+      "imports": {
+        "rfc4648": "${url.resourcesCommonPath}/vendor/rfc4648/rfc4648.js"
+      }
+    }
+  </script>
   <#if scripts??>
     <#list scripts as script>
       <script src="${script}" type="text/javascript"></script>
@@ -30,6 +68,9 @@
   </button>
   <main class="wrap">
     <section class="card">
+      <#if dsSiteUrl()?has_content>
+        <a class="back-link" href="${dsSiteUrl()}">Go back to ${dsSiteName()}</a>
+      </#if>
       <img class="logo" src="${url.resourcesPath}/img/logo.png?v=${properties.dsVersion}" alt="DobberSports" width="571" height="90">
       <h1 class="title"><#nested "header"></h1>
       <#nested "summary">
@@ -38,7 +79,7 @@
         <p class="sub"><span class="req" aria-hidden="true">*</span> ${msg("requiredFields")}</p>
       </#if>
 
-      <#if auth?has_content && auth.showUsername() && !auth.showResetCredentials()>
+      <#if auth?has_content && auth.showUsername() && !auth.showResetCredentials() && !dsEmail?has_content>
         <#nested "show-username">
         <#if auth.attemptedUsername?has_content>
           <p class="attempted">${auth.attemptedUsername}</p>
