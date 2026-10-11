@@ -5,6 +5,9 @@ on:
     branches: [ main, master ]
     tags:
       - 'v*'
+    # A workflow-only commit does not change the image.
+    paths-ignore:
+      - '.github/**'
 
   workflow_dispatch:
 
