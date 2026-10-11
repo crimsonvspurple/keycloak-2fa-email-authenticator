@@ -8,11 +8,15 @@ COPY src ./src
 # Build the project
 RUN mvn clean package -DskipTests
 
-# Stage 2: Create the Keycloak image
-FROM quay.io/keycloak/keycloak:26.5.3
+# Stage 2: Create the Keycloak image.
+# The provider pom compiles against this same Keycloak version.
+FROM quay.io/keycloak/keycloak:26.7.3
 
 # Copy the provider JAR from the builder stage
 COPY --from=builder /app/target/keycloak-2fa-email-authenticator-*.jar /opt/keycloak/providers/
+
+# DobberSports login theme. kc.sh build only sees themes that are already in the image.
+COPY themes/ds /opt/keycloak/themes/ds
 
 # Build Keycloak to include the provider
 RUN /opt/keycloak/bin/kc.sh build
