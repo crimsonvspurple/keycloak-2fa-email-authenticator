@@ -202,7 +202,8 @@ html[data-theme="dark"] .theme-toggle-icon {
   outline-offset: 2px;
 }
 
-.social img { display: block; flex: none; }
+.social img,
+.social svg.social-mark { display: block; flex: none; }
 
 .social-label { min-width: 0; }
 
