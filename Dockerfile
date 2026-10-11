@@ -19,10 +19,14 @@ COPY --from=builder /app/target/keycloak-2fa-email-authenticator-*.jar /opt/keyc
 COPY themes/ds /opt/keycloak/themes/ds
 # Git sha, so a theme deploy changes the CSS URL. Cloudflare otherwise tells
 # browsers to keep /resources/<keycloak-version>/.../ds.css for four hours.
+# The base image drops to uid 1000, which cannot rewrite the copied theme.
+USER root
 ARG DS_THEME_REV=dev
 RUN sed -i "s|__DS_THEME_REV__|${DS_THEME_REV}|g" /opt/keycloak/themes/ds/login/theme.properties \
     && grep -q "dsVersion=${DS_THEME_REV}" /opt/keycloak/themes/ds/login/theme.properties \
+    && chown -R 1000:0 /opt/keycloak/themes/ds \
     && /opt/keycloak/bin/kc.sh build
+USER 1000
 
 # Expose the port
 EXPOSE 8080
