@@ -87,8 +87,12 @@
         </#if>
         <div class="field">
           <label class="micro" for="username">Email</label>
+          <#assign attempted = dsUsername!''>
+          <#if !attempted?has_content && login??>
+            <#assign attempted = login.username!''>
+          </#if>
           <input id="username" name="username" type="email" autocomplete="${(enableWebAuthnConditionalUI?has_content)?then('username webauthn', 'username')}"
-                 value="${(login.username!'')}" required>
+                 value="${attempted}" required>
         </div>
         <button class="primary" name="continue" type="submit">Continue</button>
         <#if realm.registrationAllowed && url.registrationUrl?has_content>

@@ -3,12 +3,14 @@ package com.mesutpiskin.keycloak.auth.email.ds;
 import jakarta.ws.rs.core.MultivaluedMap;
 import jakarta.ws.rs.core.Response;
 
+import org.keycloak.WebAuthnConstants;
 import org.keycloak.authentication.AuthenticationFlowContext;
 import org.keycloak.authentication.AuthenticationFlowError;
 import org.keycloak.authentication.Authenticator;
 import org.keycloak.authentication.authenticators.browser.WebAuthnConditionalUIAuthenticator;
 import org.keycloak.credential.CredentialModel;
 import org.keycloak.events.Errors;
+import org.keycloak.forms.login.LoginFormsProvider;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
 import org.keycloak.models.UserCredentialModel;
@@ -37,11 +39,11 @@ public class DsEmailLoginAuthenticator implements Authenticator {
         }
         String step = context.getAuthenticationSession().getAuthNote(STEP);
         if ("code".equals(step) && context.getUser() != null) {
-            context.challenge(codeForm(context));
+            context.challenge(codeForm(context, null));
             return;
         }
         if ("credential".equals(step) && context.getUser() != null) {
-            context.challenge(credentialForm(context));
+            context.challenge(credentialForm(context, null));
             return;
         }
         context.challenge(emailForm(context));
@@ -70,8 +72,7 @@ public class DsEmailLoginAuthenticator implements Authenticator {
                 context.success();
                 return;
             }
-            context.form().setError(error);
-            context.challenge(codeForm(context));
+            context.challenge(codeForm(context, error));
             return;
         }
         if (form.containsKey("email-code")) {
@@ -88,20 +89,18 @@ public class DsEmailLoginAuthenticator implements Authenticator {
     private void lookup(AuthenticationFlowContext context, String raw) {
         String email = raw == null ? "" : raw.trim();
         if (!email.contains("@") || email.length() > 320) {
-            context.form().setError("Enter the email on the account.");
-            context.challenge(emailForm(context));
+            context.challenge(emailForm(context, "Enter the email on the account."));
             return;
         }
         UserModel user = KeycloakModelUtils.findUserByNameOrEmail(context.getSession(), context.getRealm(), email);
         if (user == null || !user.isEnabled()) {
             context.getEvent().error(Errors.USER_NOT_FOUND);
-            context.form().setError("No DobberSports account uses that email.");
-            context.challenge(emailForm(context));
+            context.challenge(emailForm(context, "No DobberSports account uses that email."));
             return;
         }
         context.setUser(user);
         context.getAuthenticationSession().setAuthNote(STEP, "credential");
-        context.challenge(credentialForm(context));
+        context.challenge(credentialForm(context, null));
     }
 
     private void checkPassword(AuthenticationFlowContext context) {
@@ -113,15 +112,15 @@ public class DsEmailLoginAuthenticator implements Authenticator {
         String password = DsAuthCodes.formValue(context, "password");
         boolean hasPassword = user.credentialManager().isConfiguredFor(CredentialModel.PASSWORD);
         if (!hasPassword) {
-            context.form().setError("This account has no password. Email yourself a code, or set a password.");
-            context.challenge(credentialForm(context));
+            context.challenge(credentialForm(context, "This account has no password. Email yourself a code, or set a password."));
             return;
         }
         if (!user.credentialManager().isValid(UserCredentialModel.password(password))) {
             context.getEvent().user(user);
             context.getEvent().error(Errors.INVALID_USER_CREDENTIALS);
-            context.form().setError("Wrong password.");
-            context.failureChallenge(AuthenticationFlowError.INVALID_CREDENTIALS, credentialForm(context));
+            context.failureChallenge(
+                    AuthenticationFlowError.INVALID_CREDENTIALS,
+                    credentialForm(context, "Wrong password."));
             return;
         }
         context.success();
@@ -138,12 +137,11 @@ public class DsEmailLoginAuthenticator implements Authenticator {
                 "Your DobberSports sign-in code",
                 "Use this code to sign in to DobberSports. If you did not ask for it, you can ignore this message.");
         if (!sent) {
-            context.form().setError("The code could not be sent. Try again in a moment.");
-            context.challenge(credentialForm(context));
+            context.challenge(credentialForm(context, "The code could not be sent. Try again in a moment."));
             return;
         }
         context.getAuthenticationSession().setAuthNote(STEP, "code");
-        context.challenge(codeForm(context));
+        context.challenge(codeForm(context, null));
     }
 
     private void restart(AuthenticationFlowContext context) {
@@ -157,28 +155,50 @@ public class DsEmailLoginAuthenticator implements Authenticator {
     }
 
     private Response emailForm(AuthenticationFlowContext context) {
-        if (passkeys.isPasskeysEnabled()) {
-            passkeys.fillContextForm(context);
-        }
-        return context.form().setAttribute("dsStep", "email").createForm("ds-login.ftl");
+        return emailForm(context, null);
     }
 
-    private Response credentialForm(AuthenticationFlowContext context) {
+    private Response emailForm(AuthenticationFlowContext context, String error) {
+        // createForm does not add the login bean, and a second form() call drops attributes.
+        LoginFormsProvider form = context.form();
+        if (passkeys.isPasskeysEnabled()) {
+            LoginFormsProvider filled = passkeys.fillContextForm(context);
+            if (filled != null) {
+                form = filled;
+            }
+            form.setAttribute(WebAuthnConstants.ENABLE_WEBAUTHN_CONDITIONAL_UI, Boolean.TRUE);
+        }
+        String username = DsAuthCodes.formValue(context, "username");
+        if (error != null) {
+            form.setError(error);
+        }
+        return form.setAttribute("dsStep", "email")
+                .setAttribute("dsUsername", username)
+                .createForm("ds-login.ftl");
+    }
+
+    private Response credentialForm(AuthenticationFlowContext context, String error) {
         UserModel user = context.getUser();
         boolean hasPassword = user != null && user.credentialManager().isConfiguredFor(CredentialModel.PASSWORD);
-        return context.form()
+        LoginFormsProvider form = context.form()
                 .setAttribute("dsStep", "credential")
                 .setAttribute("dsEmail", user == null ? "" : user.getEmail())
-                .setAttribute("hasPassword", hasPassword)
-                .createForm("ds-login.ftl");
+                .setAttribute("hasPassword", hasPassword);
+        if (error != null) {
+            form.setError(error);
+        }
+        return form.createForm("ds-login.ftl");
     }
 
-    private Response codeForm(AuthenticationFlowContext context) {
+    private Response codeForm(AuthenticationFlowContext context, String error) {
         UserModel user = context.getUser();
-        return context.form()
+        LoginFormsProvider form = context.form()
                 .setAttribute("dsStep", "code")
-                .setAttribute("dsEmail", user == null ? "" : user.getEmail())
-                .createForm("ds-login.ftl");
+                .setAttribute("dsEmail", user == null ? "" : user.getEmail());
+        if (error != null) {
+            form.setError(error);
+        }
+        return form.createForm("ds-login.ftl");
     }
 
     @Override

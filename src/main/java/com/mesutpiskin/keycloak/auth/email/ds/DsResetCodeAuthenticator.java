@@ -4,6 +4,7 @@ import jakarta.ws.rs.core.Response;
 
 import org.keycloak.authentication.AuthenticationFlowContext;
 import org.keycloak.authentication.Authenticator;
+import org.keycloak.forms.login.LoginFormsProvider;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
 import org.keycloak.models.UserModel;
@@ -24,7 +25,7 @@ public class DsResetCodeAuthenticator implements Authenticator {
             send(context);
             return;
         }
-        context.challenge(form(context));
+        context.challenge(form(context, null));
     }
 
     @Override
@@ -38,8 +39,7 @@ public class DsResetCodeAuthenticator implements Authenticator {
             context.success();
             return;
         }
-        context.form().setError(error);
-        context.challenge(form(context));
+        context.challenge(form(context, error));
     }
 
     private void send(AuthenticationFlowContext context) {
@@ -48,17 +48,17 @@ public class DsResetCodeAuthenticator implements Authenticator {
                 "password-reset",
                 "Your DobberSports password code",
                 "Use this code to set a password on your DobberSports account. If you did not ask for it, you can ignore this message.");
-        if (!sent) {
-            context.form().setError("The code could not be sent. Try again in a moment.");
-        }
-        context.challenge(form(context));
+        context.challenge(form(context, sent ? null : "The code could not be sent. Try again in a moment."));
     }
 
-    private Response form(AuthenticationFlowContext context) {
+    private Response form(AuthenticationFlowContext context, String error) {
         UserModel user = context.getUser();
-        return context.form()
-                .setAttribute("dsEmail", user == null ? "" : user.getEmail())
-                .createForm("ds-reset-code.ftl");
+        LoginFormsProvider provider = context.form()
+                .setAttribute("dsEmail", user == null ? "" : user.getEmail());
+        if (error != null) {
+            provider.setError(error);
+        }
+        return provider.createForm("ds-reset-code.ftl");
     }
 
     @Override
