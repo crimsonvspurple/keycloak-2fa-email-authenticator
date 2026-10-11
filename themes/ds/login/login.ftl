@@ -33,7 +33,7 @@
         <#if !usernameHidden??>
           <div class="field email-field">
             <label class="micro" for="username">Email</label>
-            <input id="username" name="username" type="email" autocomplete="username" autofocus
+            <input id="username" name="username" type="email" autocomplete="username"
                    value="${(login.username!'')}" required>
           </div>
         </#if>
@@ -113,6 +113,8 @@
         if (current) write(current);
 
         var social = document.querySelector(".social");
+        var email = document.getElementById("username");
+        var focusedLast = false;
         if (social && current && current !== "password") {
           var last = document.getElementById("social-" + current);
           if (last && social.contains(last)) {
@@ -122,8 +124,11 @@
             tag.textContent = "Last used";
             last.appendChild(tag);
             if (last !== social.firstElementChild) social.insertBefore(last, social.firstElementChild);
+            last.focus({ preventScroll: true });
+            focusedLast = true;
           }
         }
+        if (!focusedLast && email) email.focus({ preventScroll: true });
         function rememberSocial(event) {
           var alias = aliasOf(event.target);
           if (valid(alias) && alias !== "password") write(alias);

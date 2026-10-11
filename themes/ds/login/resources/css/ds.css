@@ -156,6 +156,8 @@ html[data-theme="dark"] .theme-toggle-icon {
 }
 
 .social a {
+  position: relative;
+  padding: 0 16px;
   border: 1.5px solid var(--border);
   background: var(--card);
   color: var(--text);
@@ -165,7 +167,12 @@ html[data-theme="dark"] .theme-toggle-icon {
 
 .social a.last-used {
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 22%, transparent);
+  background: color-mix(in srgb, var(--primary) 8%, var(--card));
+}
+
+.social a.last-used:focus {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
 }
 
 .social img { display: block; flex: none; }
@@ -173,14 +180,24 @@ html[data-theme="dark"] .theme-toggle-icon {
 .social-label { min-width: 0; }
 
 .last-used-tag {
-  margin-left: auto;
-  flex: none;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 10px;
-  font-weight: 650;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  position: absolute;
+  top: 0;
+  right: 14px;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  height: 18px;
+  margin: 0;
+  padding: 0 8px;
+  border: 1.5px solid var(--primary);
+  border-radius: 999px;
+  background: var(--card);
   color: var(--primary);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0;
+  line-height: 1;
 }
 
 .social a + a { margin-top: 8px; }
