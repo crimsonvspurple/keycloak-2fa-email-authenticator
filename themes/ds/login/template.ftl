@@ -1,11 +1,11 @@
-<#macro registrationLayout bodyClass="" displayInfo=false displayMessage=true displayRequiredFields=false>
+<#macro registrationLayout bodyClass="" displayInfo=false displayMessage=true displayRequiredFields=false pageTitle="Sign in">
 <!DOCTYPE html>
 <html lang="${lang}" data-theme="light">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light dark">
-  <title>Sign in · DobberSports</title>
+  <title>${pageTitle} · DobberSports</title>
   <script>
     (function () {
       var stored = null;

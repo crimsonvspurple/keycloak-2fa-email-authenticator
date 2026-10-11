@@ -53,6 +53,9 @@
           <p class="field-error" role="alert">${kcSanitize(messagesPerField.getFirstError('username','password'))?no_esc}</p>
         </#if>
         <button class="primary pw-submit" id="kc-login" name="login" type="submit">Sign in</button>
+        <#if realm.registrationAllowed && url.registrationUrl?has_content>
+          <p class="register-note">New to DobberSports? <a href="${url.registrationUrl}">Create an account</a>. A new Google email creates one too.</p>
+        </#if>
         <#if realm.resetPasswordAllowed>
           <a class="micro-link pw-forgot" href="${url.loginResetCredentialsUrl}">Forgot password</a>
         </#if>

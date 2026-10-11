@@ -244,7 +244,22 @@ form.login-grid > .pw-toggle {
 form.login-grid > .check { grid-column: 1 / -1; grid-row: 4; }
 form.login-grid > .field-error { grid-column: 1 / -1; grid-row: 5; }
 form.login-grid > .pw-submit { grid-column: 1 / -1; grid-row: 6; }
+form.login-grid > .register-note {
+  grid-column: 1 / -1;
+  grid-row: 7;
+  margin: 14px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.45;
+}
 form.login-grid > input[type="hidden"] { display: none; }
+
+.register-note a {
+  color: var(--primary);
+  text-decoration: none;
+}
+
+.register-note a:hover { text-decoration: underline; }
 
 .field { margin-top: 14px; }
 
