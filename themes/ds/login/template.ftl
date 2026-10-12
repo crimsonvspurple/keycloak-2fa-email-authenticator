@@ -39,7 +39,30 @@
 </#function>
 <#macro dsTurnstile action skips="">
   <#if dsTurnstileSiteKey?has_content>
-    <div class="cf-turnstile" data-sitekey="${dsTurnstileSiteKey}" data-action="${action}" data-appearance="interaction-only"></div>
+    <div class="cf-turnstile" data-sitekey="${dsTurnstileSiteKey}" data-action="${action}" data-appearance="always" data-size="flexible" data-callback="dsTurnstileDone" data-error-callback="dsTurnstileFailed"></div>
+    <script>
+      window.dsTurnstilePending = null;
+      window.dsTurnstileDone = function () {
+        var note = document.querySelector(".ds-turnstile-wait");
+        if (note) note.remove();
+        var button = window.dsTurnstilePending;
+        window.dsTurnstilePending = null;
+        if (button) button.click();
+      };
+      window.dsTurnstileFailed = function () {
+        window.dsTurnstilePending = null;
+        var box = document.querySelector(".cf-turnstile");
+        if (!box) return;
+        var note = document.querySelector(".ds-turnstile-wait");
+        if (!note) {
+          note = document.createElement("p");
+          note.className = "field-error ds-turnstile-wait";
+          note.setAttribute("role", "alert");
+          box.insertAdjacentElement("afterend", note);
+        }
+        note.textContent = "The browser check failed. Refresh the page, close developer tools, and allow challenges.cloudflare.com.";
+      };
+    </script>
     <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
     <script>
       (function () {
@@ -53,14 +76,20 @@
           var name = event.submitter && event.submitter.name;
           if (name && skips.indexOf(name) !== -1) return;
           var field = form.querySelector("[name='cf-turnstile-response']");
-          if (field && field.value) return;
+          if (field && field.value) {
+            window.dsTurnstilePending = null;
+            return;
+          }
           event.preventDefault();
-          if (form.querySelector(".ds-turnstile-wait")) return;
-          var note = document.createElement("p");
-          note.className = "field-error ds-turnstile-wait";
-          note.setAttribute("role", "alert");
-          note.textContent = "Still checking this browser. Wait a moment and try again. Allow challenges.cloudflare.com if it never finishes.";
-          box.insertAdjacentElement("afterend", note);
+          window.dsTurnstilePending = event.submitter || null;
+          var note = form.querySelector(".ds-turnstile-wait");
+          if (!note) {
+            note = document.createElement("p");
+            note.className = "field-error ds-turnstile-wait";
+            note.setAttribute("role", "alert");
+            box.insertAdjacentElement("afterend", note);
+          }
+          note.textContent = "Complete the check above. This continues when it finishes. Close developer tools if the page is paused.";
         });
       })();
     </script>
