@@ -80,6 +80,13 @@ public class DsEmailLoginAuthenticator implements Authenticator {
             passkeys.action(context);
             return;
         }
+        if (openingEmail(context) && form.containsKey("username") && !Turnstile.allows(
+                form.getFirst("cf-turnstile-response"),
+                context.getConnection().getRemoteAddr(),
+                Turnstile.LOGIN)) {
+            context.challenge(emailForm(context, Turnstile.REJECTED));
+            return;
+        }
         rememberPasskey(context);
         String step = context.getAuthenticationSession().getAuthNote(STEP);
         if ("code".equals(step)) {
@@ -319,6 +326,7 @@ public class DsEmailLoginAuthenticator implements Authenticator {
         }
         return form.setAttribute("dsStep", "email")
                 .setAttribute("dsUsername", username)
+                .setAttribute("dsTurnstileSiteKey", Turnstile.siteKey())
                 .createForm("ds-login.ftl");
     }
 
@@ -347,6 +355,11 @@ public class DsEmailLoginAuthenticator implements Authenticator {
             form.setError(error);
         }
         return form.createForm("ds-login.ftl");
+    }
+
+    private static boolean openingEmail(AuthenticationFlowContext context) {
+        String step = context.getAuthenticationSession().getAuthNote(STEP);
+        return step == null || step.isBlank() || "email".equals(step);
     }
 
     private void passkeyChoice(LoginFormsProvider form, AuthenticationFlowContext context) {

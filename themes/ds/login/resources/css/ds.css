@@ -256,6 +256,7 @@ button.back-link {
 }
 
 .stack { margin-top: 18px; }
+.cf-turnstile { margin: 12px 0; }
 
 form.login-grid {
   display: grid;
