@@ -7,6 +7,13 @@
     <#local raw = raw?substring(0, raw?length - 4)>
   </#if>
   <#local id = (client.clientId!"")>
+  <#if id == "account" || id == "account-console">
+    <#return "your account">
+  </#if>
+  <#-- Built-in clients store an unresolved message key in the name. -->
+  <#if raw?starts_with("${") && raw?ends_with("}")>
+    <#local raw = "">
+  </#if>
   <#if raw?has_content && raw != id>
     <#return raw>
   </#if>
@@ -27,6 +34,7 @@
   <#if id == "gp-web"><#return "https://new.goaliepost.com"></#if>
   <#if id == "dn-web"><#return "https://new.dobbernomics.com"></#if>
   <#if id == "geek-web"><#return "https://new-geek.dobbersports.com"></#if>
+  <#if id == "account" || id == "account-console"><#return "/realms/ds/account"></#if>
   <#return "">
 </#function>
 <#macro dsPasskeySwitch>
@@ -133,7 +141,9 @@
         <div class="info"><#nested "info"></div>
       </#if>
     </section>
-    <#if dsSiteUrl()?has_content>
+    <#if .globals.dsAccountLink!false>
+      <button class="back-link" type="submit" form="kc-link-idp" name="cancel-aia">Cancel and go back to your account</button>
+    <#elseif dsSiteUrl()?has_content>
       <a class="back-link" href="${dsSiteUrl()}">Cancel and go back to ${dsSiteName()}</a>
     </#if>
   </main>

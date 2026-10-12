@@ -133,6 +133,11 @@ html[data-theme="dark"] .theme-toggle-icon {
   text-decoration: none;
 }
 
+button.back-link {
+  font-family: inherit;
+  cursor: pointer;
+}
+
 .back-link:hover { border-color: var(--primary); color: var(--primary); }
 
 .logo {
