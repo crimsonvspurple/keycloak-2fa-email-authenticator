@@ -14,6 +14,7 @@
       <#if messagesPerField.existsError('username')>
         <p class="field-error" role="alert">${kcSanitize(messagesPerField.get('username'))?no_esc}</p>
       </#if>
+      <@layout.dsTurnstile "reset" />
       <button class="primary" type="submit">Continue</button>
       <a class="text-button" href="${url.loginUrl}">Back to sign in</a>
     </form>

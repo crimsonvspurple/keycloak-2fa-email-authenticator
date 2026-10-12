@@ -90,6 +90,10 @@ public class DsEmailLoginAuthenticator implements Authenticator {
         rememberPasskey(context);
         String step = context.getAuthenticationSession().getAuthNote(STEP);
         if ("code".equals(step)) {
+            if (!Turnstile.allows(form.getFirst("cf-turnstile-response"), context.getConnection().getRemoteAddr(), Turnstile.OTP)) {
+                context.challenge(codeForm(context, Turnstile.REJECTED));
+                return;
+            }
             if (form.containsKey("resend")) {
                 int wait = DsAuthCodes.resendWaitSeconds(context);
                 if (wait > 0) {
@@ -108,6 +112,10 @@ public class DsEmailLoginAuthenticator implements Authenticator {
             return;
         }
         if (form.containsKey("email-code")) {
+            if (!Turnstile.allows(form.getFirst("cf-turnstile-response"), context.getConnection().getRemoteAddr(), Turnstile.EMAIL)) {
+                context.challenge(credentialForm(context, Turnstile.REJECTED));
+                return;
+            }
             sendCode(context);
             return;
         }
@@ -336,7 +344,8 @@ public class DsEmailLoginAuthenticator implements Authenticator {
         LoginFormsProvider form = context.form()
                 .setAttribute("dsStep", "credential")
                 .setAttribute("dsEmail", user == null ? "" : user.getEmail())
-                .setAttribute("hasPassword", hasPassword);
+                .setAttribute("hasPassword", hasPassword)
+                .setAttribute("dsTurnstileSiteKey", Turnstile.siteKey());
         passkeyChoice(form, context);
         if (error != null) {
             form.setError(error);
@@ -349,7 +358,8 @@ public class DsEmailLoginAuthenticator implements Authenticator {
         LoginFormsProvider form = context.form()
                 .setAttribute("dsStep", "code")
                 .setAttribute("dsEmail", user == null ? "" : user.getEmail())
-                .setAttribute("dsResendWait", DsAuthCodes.resendWaitSeconds(context));
+                .setAttribute("dsResendWait", DsAuthCodes.resendWaitSeconds(context))
+                .setAttribute("dsTurnstileSiteKey", Turnstile.siteKey());
         passkeyChoice(form, context);
         if (error != null) {
             form.setError(error);

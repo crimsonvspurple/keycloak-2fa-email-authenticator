@@ -65,6 +65,7 @@
           </div>
         </div>
         <@layout.dsPasskeySwitch />
+        <@layout.dsTurnstile "otp" "restart" />
         <button class="primary" name="login" type="submit">Continue</button>
         <@layout.dsResendButton />
         <button class="text-button" name="restart" type="submit" formnovalidate>Use a different email</button>
@@ -80,6 +81,7 @@
           </div>
         </div>
         </#if>
+        <@layout.dsTurnstile "email" "login,restart" />
         <#if hasPassword!false>
           <button class="primary" id="kc-login" name="login" type="submit">Sign in</button>
           <button class="secondary" name="email-code" type="submit" formnovalidate>Email me a code</button>
@@ -106,28 +108,7 @@
           <input id="username" name="username" type="email" autocomplete="${(enableWebAuthnConditionalUI?has_content)?then('username webauthn', 'username')}"
                  value="${attempted}" required>
         </div>
-        <#if dsTurnstileSiteKey?has_content>
-          <div class="cf-turnstile" data-sitekey="${dsTurnstileSiteKey}" data-action="login" data-appearance="interaction-only"></div>
-          <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
-          <script>
-            (function () {
-              var form = document.getElementById("kc-form-login");
-              if (!form) return;
-              form.addEventListener("submit", function (event) {
-                var field = form.querySelector("[name='cf-turnstile-response']");
-                if (field && field.value) return;
-                event.preventDefault();
-                if (document.getElementById("ds-turnstile-wait")) return;
-                var note = document.createElement("p");
-                note.id = "ds-turnstile-wait";
-                note.className = "field-error";
-                note.setAttribute("role", "alert");
-                note.textContent = "Still checking this browser. Wait a moment and press Continue again. Allow challenges.cloudflare.com if it never finishes.";
-                form.querySelector(".cf-turnstile").insertAdjacentElement("afterend", note);
-              });
-            })();
-          </script>
-        </#if>
+        <@layout.dsTurnstile "login" />
         <button class="primary" name="continue" type="submit">Continue</button>
         <#if realm.resetPasswordAllowed>
           <a class="text-button" href="${url.loginResetCredentialsUrl}">Forgot password</a>

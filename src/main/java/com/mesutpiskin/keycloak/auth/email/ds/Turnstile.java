@@ -18,6 +18,9 @@ import org.jboss.logging.Logger;
 /** Cloudflare Turnstile. The secret stays in the Keycloak process environment. */
 final class Turnstile {
     static final String LOGIN = "login";
+    static final String EMAIL = "email";
+    static final String RESET = "reset";
+    static final String OTP = "otp";
     static final String REGISTER = "register";
     static final String REJECTED = "Confirm you are a person and try again.";
 

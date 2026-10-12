@@ -12,6 +12,7 @@
     </#if>
     <form class="stack" action="${url.loginAction}" method="post" novalidate>
       <@layout.dsOtpField />
+      <@layout.dsTurnstile "otp" />
       <button class="primary" name="login" type="submit">Continue</button>
       <@layout.dsResendButton />
       <a class="text-button" href="${url.loginUrl}">Back to sign in</a>

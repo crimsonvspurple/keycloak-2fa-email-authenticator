@@ -3,3 +3,4 @@ com.mesutpiskin.keycloak.auth.email.ConditionalEmailAuthenticatorFormFactory
 com.mesutpiskin.keycloak.auth.email.NoEnrollmentEmailAuthenticatorFormFactory
 com.mesutpiskin.keycloak.auth.email.ds.DsEmailLoginAuthenticatorFactory
 com.mesutpiskin.keycloak.auth.email.ds.DsResetCodeAuthenticatorFactory
+com.mesutpiskin.keycloak.auth.email.ds.DsResetEmailAuthenticatorFactory

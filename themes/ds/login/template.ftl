@@ -37,6 +37,35 @@
   <#if id == "account" || id == "account-console"><#return "/realms/ds/account"></#if>
   <#return "">
 </#function>
+<#macro dsTurnstile action skips="">
+  <#if dsTurnstileSiteKey?has_content>
+    <div class="cf-turnstile" data-sitekey="${dsTurnstileSiteKey}" data-action="${action}" data-appearance="interaction-only"></div>
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+    <script>
+      (function () {
+        var script = document.currentScript;
+        var box = script ? script.previousElementSibling : null;
+        while (box && !(box.classList && box.classList.contains("cf-turnstile"))) box = box.previousElementSibling;
+        var form = box && box.closest ? box.closest("form") : null;
+        if (!form) return;
+        var skips = "${skips}".split(",");
+        form.addEventListener("submit", function (event) {
+          var name = event.submitter && event.submitter.name;
+          if (name && skips.indexOf(name) !== -1) return;
+          var field = form.querySelector("[name='cf-turnstile-response']");
+          if (field && field.value) return;
+          event.preventDefault();
+          if (form.querySelector(".ds-turnstile-wait")) return;
+          var note = document.createElement("p");
+          note.className = "field-error ds-turnstile-wait";
+          note.setAttribute("role", "alert");
+          note.textContent = "Still checking this browser. Wait a moment and try again. Allow challenges.cloudflare.com if it never finishes.";
+          box.insertAdjacentElement("afterend", note);
+        });
+      })();
+    </script>
+  </#if>
+</#macro>
 <#macro dsPasskeySwitch>
   <label class="switch">
     <span class="switch-control">

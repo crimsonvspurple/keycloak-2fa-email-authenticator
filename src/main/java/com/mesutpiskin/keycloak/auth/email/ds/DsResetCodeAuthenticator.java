@@ -39,6 +39,13 @@ public class DsResetCodeAuthenticator implements Authenticator {
             context.challenge(form(context, "That link is no longer valid. Enter the code instead."));
             return;
         }
+        if (!Turnstile.allows(
+                DsAuthCodes.formValue(context, "cf-turnstile-response"),
+                context.getConnection().getRemoteAddr(),
+                Turnstile.OTP)) {
+            context.challenge(form(context, Turnstile.REJECTED));
+            return;
+        }
         if (DsAuthCodes.pressed(context, "resend")) {
             int wait = DsAuthCodes.resendWaitSeconds(context);
             if (wait > 0) {
@@ -70,7 +77,8 @@ public class DsResetCodeAuthenticator implements Authenticator {
         UserModel user = context.getUser();
         LoginFormsProvider provider = context.form()
                 .setAttribute("dsEmail", user == null ? "" : user.getEmail())
-                .setAttribute("dsResendWait", DsAuthCodes.resendWaitSeconds(context));
+                .setAttribute("dsResendWait", DsAuthCodes.resendWaitSeconds(context))
+                .setAttribute("dsTurnstileSiteKey", Turnstile.siteKey());
         if (error != null) {
             provider.setError(error);
         }
