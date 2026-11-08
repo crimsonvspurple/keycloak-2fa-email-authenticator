@@ -53,7 +53,7 @@ public class DsResetEmailAuthenticator implements Authenticator {
     @Override
     public void action(AuthenticationFlowContext context) {
         MultivaluedMap<String, String> form = context.getHttpRequest().getDecodedFormParameters();
-        if (!Turnstile.allows(form.getFirst("cf-turnstile-response"), context.getConnection().getRemoteAddr(), Turnstile.RESET)) {
+        if (!Turnstile.allows(context, form.getFirst("cf-turnstile-response"), Turnstile.RESET)) {
             challenge(context, Turnstile.REJECTED);
             return;
         }
@@ -85,7 +85,7 @@ public class DsResetEmailAuthenticator implements Authenticator {
     }
 
     private void challenge(AuthenticationFlowContext context, String error) {
-        LoginFormsProvider form = context.form().setAttribute("dsTurnstileSiteKey", Turnstile.siteKey());
+        LoginFormsProvider form = context.form().setAttribute("dsTurnstileSiteKey", Turnstile.siteKeyFor(context));
         if (error != null) {
             form.setError(error);
         }

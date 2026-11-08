@@ -21,4 +21,28 @@ class TurnstileTest {
         assertFalse(Turnstile.accepted(body, Turnstile.LOGIN, Set.of("localhost")));
         assertFalse(Turnstile.accepted(JSON.readTree("{\"success\":false}"), Turnstile.LOGIN, Set.of("auth.dobbersports.com")));
     }
+
+    @Test
+    void matchesTheBypassSecretExactly() {
+        assertTrue(Turnstile.matches("secret-value", "secret-value"));
+        assertTrue(Turnstile.matches("secret-value", " secret-value "));
+        assertFalse(Turnstile.matches("secret-value", "secret-valuE"));
+        assertFalse(Turnstile.matches("secret-value", "secret-value-extra"));
+        assertFalse(Turnstile.matches("secret-value", ""));
+        assertFalse(Turnstile.matches("secret-value", null));
+        assertFalse(Turnstile.matches("", "secret-value"));
+        assertFalse(Turnstile.matches("   ", "secret-value"));
+        assertFalse(Turnstile.matches("secret-value", "x".repeat(513)));
+    }
+
+    @Test
+    void blankServerSecretDoesNotHonorASessionNote() {
+        assertFalse(Turnstile.bypasses("", true, "secret-value"));
+        assertFalse(Turnstile.bypasses(null, true, "secret-value"));
+        assertFalse(Turnstile.bypasses("   ", true, "secret-value"));
+        assertTrue(Turnstile.bypasses("secret-value", true, null));
+        assertTrue(Turnstile.bypasses("secret-value", false, "secret-value"));
+        assertFalse(Turnstile.bypasses("secret-value", false, "wrong"));
+        assertFalse(Turnstile.bypasses("secret-value", false, null));
+    }
 }

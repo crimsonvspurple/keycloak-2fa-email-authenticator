@@ -19,8 +19,9 @@ public class DsTurnstileRegistration implements FormAction {
 
     @Override
     public void buildPage(FormContext context, LoginFormsProvider form) {
-        if (Turnstile.configured()) {
-            form.setAttribute("dsTurnstileSiteKey", Turnstile.siteKey());
+        String siteKey = Turnstile.siteKeyFor(context);
+        if (!siteKey.isBlank()) {
+            form.setAttribute("dsTurnstileSiteKey", siteKey);
         }
     }
 
@@ -31,7 +32,7 @@ public class DsTurnstileRegistration implements FormAction {
             context.success();
             return;
         }
-        if (Turnstile.allows(form.getFirst("cf-turnstile-response"), context.getConnection().getRemoteAddr(), Turnstile.REGISTER)) {
+        if (Turnstile.allows(context, form.getFirst("cf-turnstile-response"), Turnstile.REGISTER)) {
             context.success();
             return;
         }

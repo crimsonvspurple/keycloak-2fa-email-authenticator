@@ -81,8 +81,8 @@ public class DsEmailLoginAuthenticator implements Authenticator {
             return;
         }
         if (openingEmail(context) && form.containsKey("username") && !Turnstile.allows(
+                context,
                 form.getFirst("cf-turnstile-response"),
-                context.getConnection().getRemoteAddr(),
                 Turnstile.LOGIN)) {
             context.challenge(emailForm(context, Turnstile.REJECTED));
             return;
@@ -90,7 +90,7 @@ public class DsEmailLoginAuthenticator implements Authenticator {
         rememberPasskey(context);
         String step = context.getAuthenticationSession().getAuthNote(STEP);
         if ("code".equals(step)) {
-            if (!Turnstile.allows(form.getFirst("cf-turnstile-response"), context.getConnection().getRemoteAddr(), Turnstile.OTP)) {
+            if (!Turnstile.allows(context, form.getFirst("cf-turnstile-response"), Turnstile.OTP)) {
                 context.challenge(codeForm(context, Turnstile.REJECTED));
                 return;
             }
@@ -112,7 +112,7 @@ public class DsEmailLoginAuthenticator implements Authenticator {
             return;
         }
         if (form.containsKey("email-code")) {
-            if (!Turnstile.allows(form.getFirst("cf-turnstile-response"), context.getConnection().getRemoteAddr(), Turnstile.EMAIL)) {
+            if (!Turnstile.allows(context, form.getFirst("cf-turnstile-response"), Turnstile.EMAIL)) {
                 context.challenge(credentialForm(context, Turnstile.REJECTED));
                 return;
             }
@@ -334,7 +334,7 @@ public class DsEmailLoginAuthenticator implements Authenticator {
         }
         return form.setAttribute("dsStep", "email")
                 .setAttribute("dsUsername", username)
-                .setAttribute("dsTurnstileSiteKey", Turnstile.siteKey())
+                .setAttribute("dsTurnstileSiteKey", Turnstile.siteKeyFor(context))
                 .createForm("ds-login.ftl");
     }
 
@@ -345,7 +345,7 @@ public class DsEmailLoginAuthenticator implements Authenticator {
                 .setAttribute("dsStep", "credential")
                 .setAttribute("dsEmail", user == null ? "" : user.getEmail())
                 .setAttribute("hasPassword", hasPassword)
-                .setAttribute("dsTurnstileSiteKey", Turnstile.siteKey());
+                .setAttribute("dsTurnstileSiteKey", Turnstile.siteKeyFor(context));
         passkeyChoice(form, context);
         if (error != null) {
             form.setError(error);
@@ -359,7 +359,7 @@ public class DsEmailLoginAuthenticator implements Authenticator {
                 .setAttribute("dsStep", "code")
                 .setAttribute("dsEmail", user == null ? "" : user.getEmail())
                 .setAttribute("dsResendWait", DsAuthCodes.resendWaitSeconds(context))
-                .setAttribute("dsTurnstileSiteKey", Turnstile.siteKey());
+                .setAttribute("dsTurnstileSiteKey", Turnstile.siteKeyFor(context));
         passkeyChoice(form, context);
         if (error != null) {
             form.setError(error);
