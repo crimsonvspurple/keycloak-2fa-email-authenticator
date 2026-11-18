@@ -10,7 +10,13 @@ RUN mvn clean package -DskipTests
 
 # Stage 2: Create the Keycloak image.
 # The provider pom compiles against this same Keycloak version.
-FROM quay.io/keycloak/keycloak:26.7.3
+FROM quay.io/keycloak/keycloak:26.8.2
+
+# Temporary mitigation for CVE-2026-114938 (Java4Shell): a HotSpot x86-64
+# Base64 intrinsic bug. Remove once Keycloak ships a JDK with OpenJDK 21.0.13.1+.
+# Do not replace the JDK the official image ships. Append when the base image
+# already sets JAVA_OPTS_APPEND; kc.sh adds this variable to the JVM command.
+ENV JAVA_OPTS_APPEND="${JAVA_OPTS_APPEND:+${JAVA_OPTS_APPEND} }-XX:-UseBASE64Intrinsics"
 
 # Copy the provider JAR from the builder stage
 COPY --from=builder /app/target/keycloak-2fa-email-authenticator-*.jar /opt/keycloak/providers/
