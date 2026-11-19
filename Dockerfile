@@ -10,13 +10,29 @@ RUN mvn clean package -DskipTests
 
 # Stage 2: Create the Keycloak image.
 # The provider pom compiles against this same Keycloak version.
-FROM quay.io/keycloak/keycloak:26.8.2
+# quay.io/keycloak/keycloak:26.8.2 was rebuilt on 2026-11-19 with patched
+# Java 21.0.13.1 (RHSA-2026:100567). The digest is the multi-arch index.
+FROM quay.io/keycloak/keycloak:26.8.2@sha256:7e66a96e4739239070aeaf72e4c5decf0f7f682cfc725b9f7ea2b336eaba38b3
 
-# Temporary mitigation for CVE-2026-114938 (Java4Shell): a HotSpot x86-64
-# Base64 intrinsic bug. Remove once Keycloak ships a JDK with OpenJDK 21.0.13.1+.
-# Do not replace the JDK the official image ships. Append when the base image
-# already sets JAVA_OPTS_APPEND; kc.sh adds this variable to the JVM command.
-ENV JAVA_OPTS_APPEND="${JAVA_OPTS_APPEND:+${JAVA_OPTS_APPEND} }-XX:-UseBASE64Intrinsics"
+# Refuse an older base image. 21.0.13.0 still has the HotSpot Base64 intrinsic bug.
+RUN ver="$(java -XshowSettings:properties -version 2>&1 | sed -n 's/.*java\.runtime\.version *= *//p' | sed 's/[[:space:]]//g')" \
+    && [ -n "$ver" ] \
+    && echo "java.runtime.version=${ver}" \
+    && base="${ver%%+*}" \
+    && base="${base%%-*}" \
+    && IFS=. \
+    && set -- $base \
+    && maj="${1:-0}" min="${2:-0}" sec="${3:-0}" patch="${4:-0}" \
+    && case "${maj}${min}${sec}${patch}" in *[!0-9]*) echo "Unparseable Java version ${ver}" >&2; exit 1 ;; esac \
+    && ok=0 \
+    && if [ "$maj" -gt 21 ] \
+        || { [ "$maj" -eq 21 ] && [ "$min" -gt 0 ]; } \
+        || { [ "$maj" -eq 21 ] && [ "$min" -eq 0 ] && [ "$sec" -gt 13 ]; } \
+        || { [ "$maj" -eq 21 ] && [ "$min" -eq 0 ] && [ "$sec" -eq 13 ] && [ "$patch" -ge 1 ]; }; then \
+         ok=1; \
+       fi \
+    && if [ "$ok" -ne 1 ]; then echo "Java ${ver} is older than 21.0.13.1" >&2; exit 1; fi \
+    && echo "Java ${ver} meets the 21.0.13.1 minimum"
 
 # Copy the provider JAR from the builder stage
 COPY --from=builder /app/target/keycloak-2fa-email-authenticator-*.jar /opt/keycloak/providers/
