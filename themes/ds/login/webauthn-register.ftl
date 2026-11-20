@@ -19,8 +19,10 @@
       <button class="text-button" type="submit" name="skip" value="on">Skip for now</button>
     </form>
     <script type="module">
+      <#-- The passkey name is generated in the browser. There is no name field. -->
       <#outputformat "JavaScript">
-      import { registerByWebAuthn } from "${url.resourcesPath}/js/webauthnRegister.js";
+      import { registerByWebAuthn } from "${url.resourcesPath}/js/webauthnRegister.js?v=${properties.dsVersion}";
+      import { passkeyLabel } from "${url.resourcesPath}/js/passkeyLabel.js?v=${properties.dsVersion}";
       const registerButton = document.getElementById("registerWebAuthn");
       if (registerButton) {
         registerButton.addEventListener("click", function () {
@@ -38,9 +40,7 @@
             userVerificationRequirement: ${userVerificationRequirement?c},
             createTimeout: ${createTimeout?c},
             excludeCredentialIds: ${excludeCredentialIds?c},
-            initLabel: ${msg("webauthn-registration-init-label")?c},
-            initLabelPrompt: ${msg("webauthn-registration-init-label-prompt")?c},
-            errmsg: ${msg("webauthn-unsupported-browser-text")?c}
+            authenticatorLabel: passkeyLabel(navigator)
           });
         });
       }
