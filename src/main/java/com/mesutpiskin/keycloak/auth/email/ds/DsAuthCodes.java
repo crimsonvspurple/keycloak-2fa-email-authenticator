@@ -50,13 +50,8 @@ final class DsAuthCodes {
         String magic = Base64.getUrlEncoder().withoutPadding().encodeToString(magicBytes);
         URI action = context.getActionUrl(context.generateAccessCode());
         String link = action.toString() + "&magic=" + magic;
-        // Angle brackets stop Slack from cutting the link at the first &.
-        String text = intro + "\n\n"
-                + "Your code is " + code + ".\n"
-                + "It expires in 10 minutes.\n\n"
-                + "Or open this link in the same browser:\n<"
-                + link + "|Sign in>\n";
-        if (!post(kind, user.getEmail(), subject, text)) {
+        Mail mail = mail(intro, code, link);
+        if (!post(kind, user.getEmail(), subject, mail.text(), mail.html())) {
             return false;
         }
         AuthenticationSessionModel session = context.getAuthenticationSession();
@@ -174,7 +169,60 @@ final class DsAuthCodes {
         session.removeAuthNote(ATTEMPTS);
     }
 
-    private static boolean post(String kind, String to, String subject, String text) {
+    /** Plain text keeps the whole URL on its own line. HTML is the message people see. */
+    static Mail mail(String intro, String code, String link) {
+        String text = intro + "\n\n"
+                + "Your code is " + code + ".\n"
+                + "It expires in 10 minutes.\n\n"
+                + "Or open this link in the same browser:\n"
+                + link + "\n";
+        String html = """
+                <!DOCTYPE html>
+                <html>
+                <body style="margin:0;background:#f3f6fb;font-family:Arial,Helvetica,sans-serif;color:#0f172a;">
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f3f6fb;padding:32px 16px;">
+                    <tr><td align="center">
+                      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;background:#ffffff;border:1px solid #d7e0ea;border-radius:12px;">
+                        <tr><td style="padding:32px;">
+                          <p style="margin:0 0 8px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#64748b;">DobberSports</p>
+                          <p style="margin:0 0 24px;font-size:16px;line-height:1.5;">{{intro}}</p>
+                          <p style="margin:0 0 8px;font-size:13px;color:#64748b;">Your code</p>
+                          <p style="margin:0 0 24px;font-size:32px;letter-spacing:6px;font-weight:700;">{{code}}</p>
+                          <a href="{{link}}" style="display:inline-block;background:#1d4ed8;color:#ffffff;text-decoration:none;padding:12px 20px;border-radius:8px;font-weight:700;">Sign in</a>
+                          <p style="margin:24px 0 0;font-size:13px;line-height:1.5;color:#64748b;">It expires in 10 minutes. Open the button in the same browser where you started.</p>
+                        </td></tr>
+                      </table>
+                    </td></tr>
+                  </table>
+                </body>
+                </html>
+                """.replace("{{intro}}", escape(intro)).replace("{{code}}", escape(code)).replace("{{link}}", escape(link));
+        return new Mail(text, html);
+    }
+
+    private static String escape(String value) {
+        return value.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;");
+    }
+
+    static final class Mail {
+        final String text;
+        final String html;
+
+        Mail(String text, String html) {
+            this.text = text;
+            this.html = html;
+        }
+
+        String text() {
+            return text;
+        }
+
+        String html() {
+            return html;
+        }
+    }
+
+    private static boolean post(String kind, String to, String subject, String text, String html) {
         String url = System.getenv("DS_NOTIFIER_MAIL_URL");
         String token = System.getenv("MAIL_BRIDGE_TOKEN");
         if (url == null || url.isBlank() || token == null || token.isBlank()) {
@@ -184,7 +232,8 @@ final class DsAuthCodes {
         String body = "{\"kind\":" + json(kind)
                 + ",\"to\":" + json(to)
                 + ",\"subject\":" + json(subject)
-                + ",\"text\":" + json(text) + "}";
+                + ",\"text\":" + json(text)
+                + ",\"html\":" + json(html) + "}";
         HttpRequest request = HttpRequest.newBuilder(URI.create(url.trim()))
                 .timeout(Duration.ofSeconds(10))
                 .header("Content-Type", "application/json")
