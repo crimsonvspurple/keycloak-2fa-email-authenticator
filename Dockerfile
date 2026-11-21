@@ -36,6 +36,10 @@ RUN ver="$(java -XshowSettings:properties -version 2>&1 | sed -n 's/.*java\.runt
 
 # Copy the provider JAR from the builder stage
 COPY --from=builder /app/target/keycloak-2fa-email-authenticator-*.jar /opt/keycloak/providers/
+# Sign in with Apple. Keycloak 26.8.2 has no built-in Apple broker.
+# klausbetz/apple-identity-provider-keycloak 1.17.0, provider id apple.
+# sha256 4091dee2a1ec9e0771bef4bd46005197d86b0a2b1f25198c41738476b1d102bb
+COPY providers/apple-identity-provider-1.17.0.jar /opt/keycloak/providers/apple-identity-provider-1.17.0.jar
 
 # DobberSports login theme. kc.sh build only sees themes that are already in the image.
 COPY themes/ds /opt/keycloak/themes/ds

@@ -34,6 +34,63 @@ html[data-theme="dark"] {
   --info-bg: #172554;
 }
 
+/* Goaliepost orange, Dobbernomics gold, Geek crimson.
+   Page, card, and borders all leave the default blue-gray. */
+html[data-site="gp"] {
+  --bg: #ffc9a3;
+  --card: #fff0e4;
+  --border: #f0b48e;
+  --muted: #8a5340;
+  --primary: #fe6e00;
+  --primary-hover: #e25f00;
+  --primary-text: #ffffff;
+}
+html[data-theme="dark"][data-site="gp"] {
+  --bg: #1a0e08;
+  --card: #2c1810;
+  --border: #6a4030;
+  --muted: #e0b8a4;
+  --primary: #fe6e00;
+  --primary-hover: #ff8a33;
+  --primary-text: #ffffff;
+}
+html[data-site="dn"] {
+  --bg: #ffe08a;
+  --card: #fff6d4;
+  --border: #e6c56a;
+  --muted: #6e5420;
+  --primary: #f5b301;
+  --primary-hover: #e0a200;
+  --primary-text: #1a1204;
+}
+html[data-theme="dark"][data-site="dn"] {
+  --bg: #141006;
+  --card: #26200e;
+  --border: #5a4a20;
+  --muted: #e2d0a0;
+  --primary: #f5b301;
+  --primary-hover: #ffc633;
+  --primary-text: #1a1204;
+}
+html[data-site="geek"] {
+  --bg: #f7c4cc;
+  --card: #ffecef;
+  --border: #e8a8b2;
+  --muted: #7a3040;
+  --primary: #a8001a;
+  --primary-hover: #8a0016;
+  --primary-text: #ffffff;
+}
+html[data-theme="dark"][data-site="geek"] {
+  --bg: #16080a;
+  --card: #2c1216;
+  --border: #6a3038;
+  --muted: #f0c0c8;
+  --primary: #e11d2e;
+  --primary-hover: #ff4d5a;
+  --primary-text: #ffffff;
+}
+
 * { box-sizing: border-box; }
 
 html, body {
@@ -167,13 +224,21 @@ button.back-link {
   font-size: 13px;
 }
 
-.social { margin-top: 22px; }
+.continue-with {
+  margin: 22px 0 8px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.social { margin-top: 0; }
+
+.social form { display: none; }
 
 .social a,
 .primary,
 .secondary,
-.text-button,
-#authenticateWebAuthnButton {
+.text-button {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -189,10 +254,20 @@ button.back-link {
 
 .social a {
   position: relative;
+  /* Equal side columns keep the icon column on one vertical line,
+     just left of a shared label column. */
+  display: grid;
+  grid-template-columns: 1fr 18px 5.6em 1fr;
+  align-items: center;
+  column-gap: 8px;
   padding: 0 16px;
   border: 1.5px solid var(--border);
-  background: var(--card);
+  background: color-mix(in srgb, var(--card) 40%, #fff);
   color: var(--text);
+}
+
+html[data-theme="dark"] .social a {
+  background: color-mix(in srgb, var(--card) 78%, #fff);
 }
 
 .social a:hover { border-color: var(--primary); }
@@ -207,10 +282,21 @@ button.back-link {
   outline-offset: 2px;
 }
 
-.social img,
-.social svg.social-mark { display: block; flex: none; }
+.social img.social-mark,
+.social svg.social-mark {
+  grid-column: 2;
+  display: block;
+  width: 18px;
+  height: 18px;
+  justify-self: center;
+}
 
-.social-label { min-width: 0; }
+.social-label {
+  grid-column: 3;
+  justify-self: start;
+  text-align: left;
+  white-space: nowrap;
+}
 
 .last-used-tag {
   position: absolute;
@@ -233,7 +319,7 @@ button.back-link {
   line-height: 1;
 }
 
-.social a + a { margin-top: 8px; }
+.social a:not(:first-of-type) { margin-top: 8px; }
 
 .divider {
   display: flex;
@@ -534,16 +620,14 @@ input[type="text"]:not(.otp-input) {
 
 .primary:hover { background: var(--primary-hover); }
 
-.secondary,
-#authenticateWebAuthnButton {
+.secondary {
   margin-top: 10px;
   border: 1.5px solid var(--border);
   background: var(--card);
   color: var(--text);
 }
 
-.secondary:hover,
-#authenticateWebAuthnButton:hover { border-color: var(--primary); }
+.secondary:hover { border-color: var(--primary); }
 
 .secondary:disabled,
 .secondary:disabled:hover {

@@ -22,6 +22,16 @@
   <#if id == "geek-web"><#return "Geek"></#if>
   <#return raw>
 </#function>
+<#function dsSiteId>
+  <#if !client??>
+    <#return "">
+  </#if>
+  <#local id = (client.clientId!"")>
+  <#if id == "gp-web"><#return "gp"></#if>
+  <#if id == "dn-web"><#return "dn"></#if>
+  <#if id == "geek-web"><#return "geek"></#if>
+  <#return "">
+</#function>
 <#function dsSiteUrl>
   <#if !client??>
     <#return "">
@@ -127,7 +137,7 @@
 </#macro>
 <#macro registrationLayout bodyClass="" displayInfo=false displayMessage=true displayRequiredFields=false pageTitle="Sign in">
 <!DOCTYPE html>
-<html lang="${lang}" data-theme="light">
+<html lang="${lang}" data-theme="light"<#if dsSiteId()?has_content> data-site="${dsSiteId()}"</#if>>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
