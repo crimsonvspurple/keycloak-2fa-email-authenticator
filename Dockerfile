@@ -43,6 +43,7 @@ COPY providers/apple-identity-provider-1.17.0.jar /opt/keycloak/providers/apple-
 
 # DobberSports login theme. kc.sh build only sees themes that are already in the image.
 COPY themes/ds /opt/keycloak/themes/ds
+COPY conf/ds-error-log.properties /tmp/ds-error-log.properties
 # Git sha, so a theme deploy changes the CSS URL. Cloudflare otherwise tells
 # browsers to keep /resources/<keycloak-version>/.../ds.css for four hours.
 # The base image drops to uid 1000, which cannot rewrite the copied theme.
@@ -51,6 +52,11 @@ ARG DS_THEME_REV=dev
 RUN sed -i "s|__DS_THEME_REV__|${DS_THEME_REV}|g" /opt/keycloak/themes/ds/login/theme.properties \
     && grep -q "dsVersion=${DS_THEME_REV}" /opt/keycloak/themes/ds/login/theme.properties \
     && chown -R 1000:0 /opt/keycloak/themes/ds \
+    && touch /opt/keycloak/conf/keycloak.conf \
+    && cat /tmp/ds-error-log.properties >> /opt/keycloak/conf/keycloak.conf \
+    && mkdir -p /var/log/ds-errors \
+    && chown 1000:0 /var/log/ds-errors \
+    && chmod 775 /var/log/ds-errors \
     && /opt/keycloak/bin/kc.sh build
 USER 1000
 

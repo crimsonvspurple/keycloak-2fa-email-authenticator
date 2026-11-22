@@ -153,7 +153,10 @@
       document.documentElement.setAttribute("data-theme", theme);
     })();
   </script>
-  <link rel="stylesheet" href="${url.resourcesPath}/css/ds.css?v=${properties.dsVersion}">
+  <#if url??>
+  <link rel="stylesheet" href="${url.resourcesPath}/css/ds.css?v=${(properties.dsVersion)!'dev'}">
+  </#if>
+  <#if url??>
   <script type="importmap">
     {
       "imports": {
@@ -161,6 +164,7 @@
       }
     }
   </script>
+  </#if>
   <#if scripts??>
     <#list scripts as script>
       <script src="${script}" type="text/javascript"></script>
@@ -174,7 +178,9 @@
   </button>
   <main class="wrap">
     <section class="card">
-      <img class="logo" src="${url.resourcesPath}/img/logo.png?v=${properties.dsVersion}" alt="DobberSports" width="571" height="90">
+      <#if url??>
+      <img class="logo" src="${url.resourcesPath}/img/logo.png?v=${(properties.dsVersion)!'dev'}" alt="DobberSports" width="571" height="90">
+      </#if>
       <h1 class="title"><#nested "header"></h1>
       <#nested "summary">
 
@@ -189,8 +195,8 @@
         </#if>
       </#if>
 
-      <#if displayMessage && message?has_content && (message.type != 'warning' || !isAppInitiatedAction??)>
-        <p class="alert alert-${message.type}" role="${(message.type = 'error')?then('alert','status')}">
+      <#if displayMessage && message?? && message.summary?has_content && ((message.type!'') != 'warning' || !isAppInitiatedAction??)>
+        <p class="alert alert-${message.type!'error'}" role="${((message.type!'') = 'error')?then('alert','status')}">
           ${kcSanitize(message.summary)?no_esc}
         </p>
       </#if>

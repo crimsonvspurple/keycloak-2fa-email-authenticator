@@ -1,18 +1,22 @@
 <#import "template.ftl" as layout>
 <#function productName>
+  <#if !client??>
+    <#return "">
+  </#if>
   <#assign raw = (client.name!"")?trim>
   <#if raw?ends_with(" web")>
     <#return raw?substring(0, raw?length - 4)>
   </#if>
   <#return raw>
 </#function>
-<@layout.registrationLayout displayMessage=!messagesPerField.existsError('username','password'); section>
+<#assign dsCredentialError = (messagesPerField?? && messagesPerField.existsError('username','password'))>
+<@layout.registrationLayout displayMessage=!dsCredentialError; section>
   <#if section = "header">
     Sign in<#if productName()?has_content> to ${productName()}</#if>
   <#elseif section = "summary">
     <p class="sub">Use your DobberSports account.</p>
   <#elseif section = "socialProviders">
-    <#if social.providers?? && social.providers?has_content>
+    <#if (social.providers)?? && social.providers?has_content>
       <p class="continue-with">Continue with</p>
       <div class="social">
         <#list social.providers as p>
@@ -30,12 +34,12 @@
           </a>
         </#list>
       </div>
-      <#if realm.password>
+      <#if realm?? && realm.password>
         <p class="divider"><span>or</span></p>
       </#if>
     </#if>
   <#elseif section = "form">
-    <#if realm.password>
+    <#if realm?? && realm.password>
       <form class="stack login-grid" id="kc-form-login" action="${url.loginAction}" method="post" novalidate>
         <#if !usernameHidden??>
           <div class="field email-field">
@@ -49,21 +53,21 @@
           <input id="password" name="password" type="password" autocomplete="current-password" required
                  <#if usernameHidden??>autofocus</#if>>
         </div>
-        <#if realm.rememberMe && !usernameHidden??>
+        <#if realm?? && realm.rememberMe && !usernameHidden??>
           <label class="check">
             <input name="rememberMe" type="checkbox" <#if login.rememberMe??>checked</#if>>
             Remember me
           </label>
         </#if>
-        <input type="hidden" name="credentialId" <#if auth.selectedCredential?has_content>value="${auth.selectedCredential}"</#if>>
-        <#if messagesPerField.existsError('username','password')>
+        <input type="hidden" name="credentialId" <#if auth?? && auth.selectedCredential?has_content>value="${auth.selectedCredential}"</#if>>
+        <#if messagesPerField?? && messagesPerField.existsError('username','password')>
           <p class="field-error" role="alert">${kcSanitize(messagesPerField.getFirstError('username','password'))?no_esc}</p>
         </#if>
         <button class="primary pw-submit" id="kc-login" name="login" type="submit">Sign in</button>
-        <#if realm.registrationAllowed && url.registrationUrl?has_content>
+        <#if realm?? && realm.registrationAllowed && url?? && url.registrationUrl?has_content>
           <p class="register-note">New to DobberSports? <a href="${url.registrationUrl}">Create an account</a>. A new Google email creates one too.</p>
         </#if>
-        <#if realm.resetPasswordAllowed>
+        <#if realm?? && realm.resetPasswordAllowed>
           <a class="micro-link pw-forgot" href="${url.loginResetCredentialsUrl}">Forgot password</a>
         </#if>
         <button class="ghost pw-toggle" type="button" id="password-toggle" aria-label="Show password">Show</button>
