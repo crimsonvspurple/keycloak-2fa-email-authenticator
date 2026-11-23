@@ -100,6 +100,12 @@
             <version>${mockito.version}</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>org.freemarker</groupId>
+            <artifactId>freemarker</artifactId>
+            <version>2.3.34</version>
+            <scope>test</scope>
+        </dependency>
 
         <!-- SendGrid Email Service Provider -->
         <dependency>

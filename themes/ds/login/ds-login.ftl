@@ -9,7 +9,7 @@
     <#elseif dsStep! == "credential">
       Sign in
     <#else>
-      Sign in<#if (client.name!"")?has_content> to ${(client.name!"")?remove_ending(" web")}</#if>
+      Sign in<#if client?? && (client.name!"")?has_content> to ${(client.name!"")?remove_ending(" web")}</#if>
     </#if>
   <#elseif section = "summary">
     <#if dsStep! == "code">
@@ -21,10 +21,10 @@
       </#if>
     </#if>
   <#elseif section = "socialProviders">
-    <#if dsStep! == "email" && ((social.providers?? && social.providers?has_content) || enableWebAuthnConditionalUI?has_content)>
+    <#if dsStep! == "email" && (((social.providers)?? && social.providers?has_content) || enableWebAuthnConditionalUI?has_content)>
       <p class="continue-with">Continue with</p>
       <div class="social">
-        <#if social.providers??>
+        <#if (social.providers)??>
           <#list social.providers as p>
             <a class="social-btn" id="social-${p.alias}" data-alias="${p.alias}" href="${p.loginUrl}">
               <#if p.alias == "google">
@@ -49,8 +49,8 @@
     <#if dsStep! == "email" && enableWebAuthnConditionalUI?has_content>
       <p class="passkey-note">No passkey yet? Sign in, then turn on Create a passkey.</p>
     </#if>
-    <#if message?has_content && (message.type != 'warning' || !isAppInitiatedAction??)>
-      <p class="alert alert-${message.type}" role="${(message.type = 'error')?then('alert','status')}">
+    <#if message?? && message.summary?has_content && ((message.type!'') != 'warning' || !isAppInitiatedAction??)>
+      <p class="alert alert-${message.type!'error'}" role="${((message.type!'') = 'error')?then('alert','status')}">
         ${kcSanitize(message.summary)?no_esc}
       </p>
     </#if>
@@ -90,7 +90,7 @@
         <#if hasPassword!false>
           <button class="primary" id="kc-login" name="login" type="submit">Sign in</button>
           <button class="secondary" name="email-code" type="submit" formnovalidate>Email me a code</button>
-          <#if realm.resetPasswordAllowed>
+          <#if realm?? && realm.resetPasswordAllowed>
             <a class="text-button" href="${url.loginResetCredentialsUrl}">Forgot password</a>
           </#if>
         <#else>
@@ -101,7 +101,7 @@
       </form>
     <#else>
       <form class="stack" id="kc-form-login" action="${url.loginAction}" method="post" novalidate>
-        <#if (social.providers?? && social.providers?has_content) || enableWebAuthnConditionalUI?has_content>
+        <#if ((social.providers)?? && social.providers?has_content) || enableWebAuthnConditionalUI?has_content>
           <p class="divider"><span>or</span></p>
         </#if>
         <div class="field">
@@ -115,7 +115,7 @@
         </div>
         <@layout.dsTurnstile "login" />
         <button class="primary" name="continue" type="submit">Continue</button>
-        <#if realm.resetPasswordAllowed>
+        <#if realm?? && realm.resetPasswordAllowed>
           <a class="text-button" href="${url.loginResetCredentialsUrl}">Forgot password</a>
         </#if>
       </form>

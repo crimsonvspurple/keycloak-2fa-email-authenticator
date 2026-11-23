@@ -1,5 +1,6 @@
 <#import "template.ftl" as layout>
-<@layout.registrationLayout displayInfo=true displayMessage=!messagesPerField.existsError('username'); section>
+<#assign dsUsernameError = (messagesPerField?? && messagesPerField.existsError('username'))>
+<@layout.registrationLayout displayInfo=true displayMessage=!dsUsernameError; section>
   <#if section = "header">
     Reset password
   <#elseif section = "summary">
@@ -11,7 +12,7 @@
         <input id="username" name="username" type="email" autocomplete="username" autofocus required
                value="${(auth.attemptedUsername!'')}">
       </div>
-      <#if messagesPerField.existsError('username')>
+      <#if messagesPerField?? && messagesPerField.existsError('username')>
         <p class="field-error" role="alert">${kcSanitize(messagesPerField.get('username'))?no_esc}</p>
       </#if>
       <@layout.dsTurnstile "reset" />

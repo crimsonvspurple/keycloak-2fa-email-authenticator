@@ -5,8 +5,8 @@
   <#elseif section = "summary">
     <p class="sub">We sent a code and a link<#if dsEmail?has_content> for <span class="attempted">${dsEmail}</span></#if>. Enter the code, or open the link in this browser. Then choose a password.</p>
   <#elseif section = "form">
-    <#if message?has_content>
-      <p class="alert alert-${message.type}" role="${(message.type = 'error')?then('alert','status')}">
+    <#if message?? && message.summary?has_content>
+      <p class="alert alert-${message.type!'error'}" role="${((message.type!'') = 'error')?then('alert','status')}">
         ${kcSanitize(message.summary)?no_esc}
       </p>
     </#if>

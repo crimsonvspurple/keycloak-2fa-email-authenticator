@@ -1,5 +1,6 @@
 <#import "template.ftl" as layout>
-<@layout.registrationLayout displayMessage=!messagesPerField.existsError('password','password-confirm'); section>
+<#assign dsPasswordError = (messagesPerField?? && messagesPerField.existsError('password','password-confirm'))>
+<@layout.registrationLayout displayMessage=!dsPasswordError; section>
   <#if section = "header">
     Set a password
   <#elseif section = "summary">
@@ -18,7 +19,7 @@
         <input id="logout-sessions" name="logout-sessions" type="checkbox" value="on" checked>
         Sign out other sessions
       </label>
-      <#if messagesPerField.existsError('password','password-confirm')>
+      <#if messagesPerField?? && messagesPerField.existsError('password','password-confirm')>
         <p class="field-error" role="alert">${kcSanitize(messagesPerField.getFirstError('password','password-confirm'))?no_esc}</p>
       </#if>
       <button class="primary" id="kc-submit" name="login" type="submit">Save password</button>
