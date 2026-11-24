@@ -238,6 +238,43 @@ class DsIdpFailureTest {
         render("ds-reset-code.ftl", Map.of());
     }
 
+    @Test
+    void appleSocialButtonUsesTheLogoGlyph() throws Exception {
+        Map<String, Object> model = new HashMap<>();
+        model.put("dsStep", "email");
+        model.put("social", Map.of("providers", List.of(
+                provider("google", "Google"),
+                provider("x", "X"),
+                provider("linkedin", "LinkedIn"),
+                provider("facebook", "Facebook"),
+                provider("apple", "Apple"))));
+
+        for (String template : List.of("login.ftl", "ds-login.ftl")) {
+            String html = render(template, model);
+            int apple = html.indexOf("id=\"social-apple\"");
+            int close = html.indexOf("</a>", apple);
+            assertTrue(apple >= 0, template);
+            String button = html.substring(apple, close);
+            assertTrue(button.contains("data-alias=\"apple\""), template);
+            assertTrue(button.contains("class=\"social-mark\""), template);
+            assertTrue(button.contains("fill=\"currentColor\""), template);
+            assertTrue(button.contains("M12.152 6.896"), template);
+            assertTrue(button.contains(">Apple</span>"), template);
+            assertTrue(html.contains("/img/google.svg?v=test"), template);
+            assertTrue(html.contains("/img/linkedin.svg?v=test"), template);
+            assertTrue(html.contains("/img/facebook.svg?v=test"), template);
+            assertTrue(html.contains("M18.244 2.25h3.308"), template);
+            assertTrue(html.contains(">Google</span>"), template);
+            assertTrue(html.contains(">X</span>"), template);
+            assertTrue(html.contains(">LinkedIn</span>"), template);
+            assertTrue(html.contains(">Facebook</span>"), template);
+        }
+    }
+
+    private static Map<String, String> provider(String alias, String displayName) {
+        return Map.of("alias", alias, "displayName", displayName, "loginUrl", "/broker/" + alias);
+    }
+
     private static String render(String templateName, Map<String, Object> extra) throws Exception {
         Configuration configuration = new Configuration(Configuration.VERSION_2_3_34);
         configuration.setDirectoryForTemplateLoading(new File("themes/ds/login"));
