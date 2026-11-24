@@ -35,6 +35,8 @@
                 </svg>
               <#elseif p.alias == "linkedin">
                 <img class="social-mark" src="${url.resourcesPath}/img/linkedin.svg?v=${properties.dsVersion}" alt="" width="18" height="18">
+              <#elseif p.alias == "facebook">
+                <img class="social-mark" src="${url.resourcesPath}/img/facebook.svg?v=${properties.dsVersion}" alt="" width="18" height="18">
               </#if>
               <span class="social-label">${p.displayName!}</span>
             </a>

@@ -257,7 +257,7 @@ button.back-link {
   /* Equal side columns keep the icon column on one vertical line,
      just left of a shared label column. */
   display: grid;
-  grid-template-columns: 1fr 18px 5.6em 1fr;
+  grid-template-columns: 1fr 18px 6.4em 1fr;
   align-items: center;
   column-gap: 8px;
   padding: 0 16px;
