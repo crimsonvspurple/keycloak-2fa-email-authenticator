@@ -26,7 +26,7 @@ public class DsVerifiedEmailLinkAuthenticatorFactory implements AuthenticatorFac
 
     @Override
     public String getHelpText() {
-        return "Links Google or X to an existing user only when that user's email is already verified.";
+        return "Links a social login to an existing user when that email is verified. An unverified match is emailed a code and linked after the code is accepted.";
     }
 
     @Override
